@@ -1,0 +1,10 @@
+*.pyc
+test.py
+dist
+dist/*
+*.env
+draft.ipynb
+*.ipynb
+output.parquet
+draft*
+*/old_dremio.py

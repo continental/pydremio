@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dremio"]
+
+[project]
+name = "dremio"
+version = "0.2.1"
+authors = [
+  { name="Holger Zernetsch", email="holger.zernetsch@continental-corporation.com" },
+  { name="Jan Pietsch", email="uig65838@contiwan.com" },
+]
+description = "A Dremio SDK for interacting with one or more Dremio instances"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "typing-extensions",
+    "requests",
+    "polars",
+    "pandas",
+    "pyarrow",
+    "python-dotenv",
+    "certifi",
+    "prettytable"
+]
+
+[project.optional-dependencies]
+build = [
+    "build",
+]
+test = [
+    "pytest",
+    "testcontainers"
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+pythonpath = "src"
+addopts = [
+    "--import-mode=importlib",
+    "-ra -q"
+]
+testpaths = [
+    "tests",
+]
+
+[project.urls]
+Homepage = "https://github.com/continental/pydremio"
+Issues = "https://github.com/continental/pydremio/issues"
