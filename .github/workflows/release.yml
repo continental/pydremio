@@ -1,0 +1,53 @@
+name: Build and Draft Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Install build tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade .[build]
+
+    - name: Extract version from tag
+      id: extract-version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Run make to update version
+      run: make version=${{ env.VERSION }} update version
+
+    - name: Build distribution
+      run: python -m build .
+
+    - name: Upload release to GitHub
+      uses: softprops/action-gh-release@v2
+      with:
+        draft: true
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        files: dist/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+
+
+
+
+
