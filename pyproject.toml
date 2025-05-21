@@ -7,28 +7,28 @@ packages = ["src/dremio"]
 
 [project]
 name = "dremio"
-version = "0.2.1"
+version = "0.3.1"
 authors = [
-  { name="Holger Zernetsch", email="holger.zernetsch@continental-corporation.com" },
-  { name="Jan Pietsch", email="uig65838@contiwan.com" },
+  { name="Holger Zernetsch", email="6146286+holgerzer@users.noreply.github.com" },
+  { name="Jan Pietsch", email="55839828+Piitschy@users.noreply.github.com" },
 ]
 description = "A Dremio SDK for interacting with one or more Dremio instances"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
 
 dependencies = [
-    "typing-extensions",
-    "requests",
-    "polars",
-    "pandas",
-    "pyarrow",
-    "python-dotenv",
-    "certifi",
-    "prettytable"
+    "typing-extensions == 4.12.2",
+    "requests == 2.32.3",
+    "polars == 1.23.0",
+    "pandas == 2.2.3",
+    "pyarrow == 19.0.1",
+    "python-dotenv == 1.0.1",
+    "certifi == 2025.1.31",
+    "prettytable == 3.14.0"
 ]
 
 [project.optional-dependencies]

@@ -8,7 +8,7 @@
 To use this dremio connector simply run:
 
 ```bash
-pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.2.1/dremio-0.2.1-py3-none-any.whl
+pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
 ```
 
 > For older Python versions (<3.11) use the install of the current version via [specific verion](#specific-version)
@@ -52,10 +52,10 @@ To use a specific version of the dremio connector just modify the import link in
 pip install https://github.com/continental/pydremio/releases/download/v<version>/dremio-<version>-py3-none-any.whl
 ```
 
-For the current version `v0.2.1` it would look like this:
+For the current version `v0.3.1` it would look like this:
 
 ```
-pip install --force-reinstall https://github.com/continental/pydremio/releases/download/v0.2.1/dremio-0.2.1-py3-none-any.whl
+pip install --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
 ```
 
 ## Basic usage

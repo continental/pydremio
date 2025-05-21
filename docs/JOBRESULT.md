@@ -12,11 +12,13 @@ There are several ways to get one:
 ## Deal with JobResults
 
 ```python
-res: JobResult = dremio.get_dataset('A.B.C').run()
+res = dremio.get_dataset('A.B.C').run()
 
 ## OR ##
 
-res: JobResult = dremio.query('SELECT * FROM A.B.C')
+res = dremio.query('SELECT * FROM A.B.C')
+
+type(res) # JobResult
 ```
 
 ### `.dict` generates a python dict

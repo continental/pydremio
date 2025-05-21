@@ -51,6 +51,10 @@ class _MixinCatalog(BaseClass):
           CatalogObject: created catalog item from dremio.
         """
         url = f"{self.hostname}/api/v3/catalog"
+        try:
+            item = to_dict(item)
+        except:
+            pass
         if isinstance(item, dict):
             item = self._T(item, True)
         new_item = copy.deepcopy(item)
@@ -88,3 +92,18 @@ class _MixinCatalog(BaseClass):
         if response.status_code != 204:
             raise DremioError("unknown error", "", response.status_code)
         return True
+
+    def _refresh_catalog(self, id: Union[UUID, str]) -> CatalogObject:
+        """Refresh the reflections associated with the specified table.
+
+        Args:
+            id (Union[UUID, str]): catalog item id.
+
+        Returns:
+            CatalogObject: The catalog object.
+        """
+        url = f"{self.hostname}/api/v3/catalog/{str(id)}/refresh"
+        response = requests.post(url, headers=self._headers)
+        self._raise_error(response)
+        print(response)
+        return self.get_catalog_by_id(id)

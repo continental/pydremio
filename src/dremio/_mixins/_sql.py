@@ -1,4 +1,5 @@
 __all__ = ["_MixinSQL"]  # this is like `export ...` in typescript
+import logging
 from typing import overload
 import requests
 from time import sleep
@@ -7,6 +8,7 @@ from ..utils.multithreading import ThreadWithReturnValue as Thread
 
 from ..utils.converter import to_dict, path_to_dotted
 from ..models import *
+from ..models.jobs import SQLType
 
 from . import BaseClass
 from ._catalog import _MixinCatalog
@@ -162,12 +164,16 @@ class _MixinSQL(_MixinCatalog, BaseClass):
 
     def _http_dataset_result(
         self,
-        dataset: Dataset,
+        dataset: Dataset | list[str] | str,
         limit: Union[int, None] = None,
         offset: int = 0,
         timeout_in_sec: int = 1000,
     ) -> tuple[JobResult, Job]:
         """Get the result of a dataset."""
+        if isinstance(dataset, list) or isinstance(dataset, str):
+            dataset = cast(Dataset, self._get_catalog_object(path=dataset))
+        if not isinstance(dataset, Dataset):
+            raise TypeError("Dataset is needed to run a dataset")
         if not dataset.sql:
             raise DremioConnectorError(
                 "No SQL statement in dataset",
@@ -235,7 +241,7 @@ class _MixinSQL(_MixinCatalog, BaseClass):
             url += f"&limit={limit}"
         response = requests.get(url, headers=self._headers)
         self._raise_error(response)
-        result = JobResult(**response.json())
+        result = JobResult.from_dict(response.json())
         if offset != 0 or limit:
             return result
 
@@ -251,7 +257,7 @@ class _MixinSQL(_MixinCatalog, BaseClass):
                 raise Exception(
                     f"Thread failed: {id}[{i}:{min(i+500,result.rowCount)}]"
                 )
-            result.rows += r.rows
+            result.rows += Schema[SQLType](r.rows)
         return result
 
     def _http_wait_for_job_result(
@@ -287,3 +293,22 @@ class _MixinSQL(_MixinCatalog, BaseClass):
                 f"Job {job.id} {job.jobState} {job.errorMessage}",
                 f"{job.cancellationReason}",
             )
+
+    @property
+    def http(self) -> "HTTP":
+        """Namespace: Collection of methods related to data fetching via http.
+        It's highly recommended to use Dremio.flight instead!!!
+
+        Returns:
+            HTTP: Namespace of http data fetching methods
+        """
+        return HTTP(self)
+
+
+class HTTP:
+    """Namespace: Collection of methods related to data fetching via http."""
+
+    def __init__(self, mixin: _MixinSQL):
+        self.query = mixin._http_query_result
+        self.start_job = mixin._http_start_job
+        self.query_dataset = mixin._http_dataset_result

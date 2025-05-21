@@ -130,3 +130,24 @@ def test_wiki_commit(dataset: Dataset):
     wiki2 = dataset.get_wiki()
     assert wiki.text == wiki2.text
     assert wiki.version == wiki2.version
+
+
+def test_refresh(dataset: Dataset):
+    dataset.refresh()
+
+
+def test_reflection(dataset: Dataset):
+    reflections = dataset.reflections
+    assert len(reflections) == 0, "There should be 0 reflections at this time"
+    del reflections
+    dataset.create_recommended_reflections()
+    reflections = dataset.reflections
+    assert (
+        len(reflections) > 0
+    ), "There should be some reflections after creating the recommended"
+    del reflections
+    dataset.delete_reflections()
+    reflections = dataset.reflections
+    assert (
+        len(reflections) == 0
+    ), "There should be 0 reflections after all should be deleted"

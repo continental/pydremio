@@ -1,12 +1,18 @@
-from dataclasses import dataclass
+from dataclasses import InitVar, dataclass, field
+from optparse import Option
+import logging
 from uuid import UUID
-from typing import Optional, Literal, Union
+from typing import Any, Iterable, Optional, Literal, Type, Union, List, cast
 from typing_extensions import Self
 from datetime import datetime
 from time import sleep
 import pyarrow as pa
 import pandas as pd
 import polars as pl
+
+from .schema import SQLType, Schema, SchemaField
+
+from ..models.reflections import NewReflection, Reflection
 
 from ..exceptions import DremioConnectorError
 
@@ -19,11 +25,52 @@ from .accesscontrol import (
 )
 
 from .jobs import JobResult
-from .utils import Field
 from .dremio_utils import DatasetAccelerationRefreshPolicy
 
 from .baseclasses import DremioAccessible, DremioObject
 from ..utils.converter import path_to_dotted
+
+
+@dataclass
+class TypeClass:
+    name: str
+    precision: Optional[int] = None
+    scale: Optional[int] = None
+
+
+@dataclass
+class Field:
+    name: str
+    type: TypeClass
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.type.name})"
+
+
+class Columns:
+    __fields: list[Field]
+
+    def __init__(self, fields: list[Field]):
+        self.__fields = fields
+
+    def __getattr__(self, name: str) -> str:
+        for f in self.__fields:
+            if f.name == name:
+                return f.name
+        raise AttributeError(f"{name} is not an attribute of Fields")
+
+    def __getitem__(self, key: str) -> Field:
+        for f in self.__fields:
+            if f.name == key:
+                return f
+        raise KeyError(f"{key} is not in Fields")
+
+    def __str__(self) -> str:
+        return "\t".join([str(f) for f in self.__fields])
+
+
+def cols_type(**fields) -> Type[Columns]:
+    return cast(Type[Columns], type("DatasetColumns", (Columns,), fields))
 
 
 @dataclass
@@ -55,6 +102,15 @@ class Dataset(DremioAccessible, DremioObject):
     format: Optional[DatasetFormat] = None
     approximateStatisticsAllowed: Optional[bool] = None
     accessControlList: Optional[AccessControlList] = None
+    _col: InitVar[Columns] = Columns([])
+
+    def __post_init__(self, col: Columns):
+        DatasetColumns = cols_type(**{f.name: f.name for f in self.fields})
+        self._col = DatasetColumns(self.fields)  # type: ignore
+
+    @property
+    def col(self):
+        return self._col  # type: ignore
 
     def __str__(self) -> str:
         return f"Dataset(path = '{path_to_dotted(self.path)}', id = {self.id})"
@@ -81,7 +137,7 @@ class Dataset(DremioAccessible, DremioObject):
             raise TypeError(
                 "This object has no dremio instance!\nTry to commit the dataset directly in the dremio sdk"
             )
-        self = self._dremio.get_folder(self.id)
+        self = self._dremio.get_dataset(id=self.id)
         return self
 
     def run(self, method: Literal["arrow", "http"] = "arrow") -> JobResult:
@@ -199,6 +255,88 @@ class Dataset(DremioAccessible, DremioObject):
             overwrite_existing=overwrite_existing,
         )
 
+    def create_reflection(self, name: str, reflection: NewReflection) -> Reflection:
+        """Create reflection for a Dataset.
+
+        Args:
+            name (str): Name for reflection.
+            reflection (NewReflection): Reflections settings
+
+        Returns:
+            Reflection (Reflection): New reflection.
+        """
+        if not self._dremio:
+            raise TypeError(
+                "This Dataset has no dremio instance!\nTry to refresh the dataset directly in the dremio sdk"
+            )
+        return self._dremio.create_reflection(
+            dataset_id=self.id, name=name, reflection=reflection
+        )
+
+    def create_recommended_reflections(
+        self, type: Literal["ALL", "RAW", "AGG"] = "ALL"
+    ) -> list[Reflection]:
+        """Creating and Retrieving Reflection Recommendations for a Dataset.
+
+        Args:
+            type (Literal[&quot;ALL&quot;, &quot;RAW&quot;, &quot;AGG&quot;], optional): The type of reflection recommendations you want to create and retrieve. Defaults to "ALL".
+
+        Returns:
+            Reflections (list[Reflection]): List of all reflections of the dataset.
+        """
+        if not self._dremio:
+            raise TypeError(
+                "This Dataset has no dremio instance!\nTry to refresh the dataset directly in the dremio sdk"
+            )
+        return self._dremio.create_recommended_reflections(self.id, type)
+
+    def get_reflections(self) -> list[Reflection]:
+        """Returns all reflections of this dataset.
+
+        Raises:
+            TypeError: Raises if there is no related dremio instance
+
+        Returns:
+            list[Reflection]: List of all reflections of this dataset. Empty list if there is none.
+        """
+        if not self._dremio:
+            raise TypeError(
+                "This Dataset has no dremio instance!\nTry to refresh the dataset directly in the dremio sdk"
+            )
+        return self._dremio.get_reflections_from_dataset(self.path)
+
+    @property
+    def reflections(self) -> list[Reflection]:
+        """All reflections of this dataset.
+
+        Returns:
+            list[Reflection]: List of all reflections of this dataset. Empty list if there is none.
+        """
+        return self.get_reflections()
+
+    def refresh(self) -> None:
+        """Refresh the dataset reflections. Same as `Dremio.refresh_dataset(this_dataset_path)`"""
+        if not self._dremio:
+            raise TypeError(
+                "This Dataset has no dremio instance!\nTry to refresh the dataset directly in the dremio sdk"
+            )
+        self._dremio.refresh_dataset(self.path)
+        self.pull()
+
+    def delete_reflections(self) -> None:
+        """Delete all reflections of this dataset."""
+        if not self._dremio:
+            raise TypeError(
+                "This Dataset has no dremio instance!\nTry to refresh the dataset directly in the dremio sdk"
+            )
+        refs = self.get_reflections()
+        for ref in refs:
+            try:
+                self._dremio.delete_reflection(ref.id)
+            except Exception as e:
+                logging.warning(e)
+        return None
+
     def get_wiki(self) -> Wiki:
         """Get the wiki of the dataset."""
         if not self._dremio:
@@ -255,3 +393,17 @@ class Dataset(DremioAccessible, DremioObject):
                 "Dataset not deleted", f"Dataset {self.path} could not be deleted"
             )
         del self
+
+    @property
+    def schema(self) -> Schema[SQLType]:
+        """Get schema like `JobResult.schema`. This is just a stream lined TypedDict for `.fields`
+
+        Returns:
+            Schema[SQLType]: `.fields` as TypedDict.
+        """
+        return Schema[SQLType](
+            [
+                SchemaField(name=f.name, type=SQLType(name=f.type.name))
+                for f in self.fields
+            ]
+        )

@@ -1,11 +1,11 @@
-from collections import UserList
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 from typing import Literal, Optional, Any, TypedDict, Union, List, Dict, overload
-from .utils import Field
+from .schema import Schema, SQLType, SchemaField
+
 import polars as pl
-import pyarrow as pa
+import pyarrow
 
 
 @dataclass
@@ -52,56 +52,10 @@ class Job:
     id: Optional[UUID] = None
 
 
-class _SchemaType(TypedDict):
-    "This appears, if the JobResult is queried via http"
-    name: str  # any sql type
-
-
-class SchemaField(TypedDict):
-    "This appears, if the JobResult is queried via arrow flight"
-    name: str
-    type: Union[pa.DataType, _SchemaType]
-
-
 class JobResultDict(TypedDict):
     rowCount: int
     schema: list[SchemaField]
     rows: list[dict[str, Any]]
-
-
-class Schema(list):
-    def __init__(self, iterable: list[SchemaField]):
-        super().__init__(SchemaField(item) for item in iterable)
-
-    def __setitem__(self, index, item):
-        super().__setitem__(index, SchemaField(item))
-
-    def insert(self, index, item):
-        super().insert(index, SchemaField(item))
-
-    def append(self, item):
-        super().append(SchemaField(item))
-
-    def extend(self, other):
-        if isinstance(other, type(self)):
-            super().extend(other)
-        else:
-            super().extend(SchemaField(item) for item in other)
-
-    @property
-    def names(self) -> list[str]:
-        return [f["name"] for f in self]
-
-    @property
-    def types(self) -> Union[list[pa.DataType], list[_SchemaType]]:
-        return [f["type"] for f in self]
-
-    @property
-    def type_names(self) -> list[str]:
-        types = self.types
-        if isinstance(types[0], dict):
-            return [t["name"] for t in types]
-        return [str(t) for t in types]
 
 
 @dataclass
@@ -111,20 +65,25 @@ class JobResult:
     """
 
     rowCount: int
-    schema: Schema
+    schema: Schema[pyarrow.DataType] | Schema[SQLType]
     rows: list[dict[str, Any]]
     # jobId: Optional[UUID] = None
 
     @staticmethod
-    def from_arrow_table(arrow_table: pa.Table) -> "JobResult":
+    def from_arrow_table(arrow_table: pyarrow.Table) -> "JobResult":
         schema_names: list[str] = arrow_table.schema.names
-        schema_types: list[pa.DataType] = arrow_table.schema.types
-        schema = Schema(
+        schema_types: list[pyarrow.DataType] = arrow_table.schema.types
+        schema = Schema[pyarrow.DataType](
             [{"name": n, "type": t} for n, t in zip(schema_names, schema_types)]
         )
         rows = arrow_table.to_pylist()
         rowCount = len(rows)
         return JobResult(rowCount=rowCount, schema=schema, rows=rows)
+
+    @staticmethod
+    def from_dict(d: JobResultDict) -> "JobResult":
+        schema = Schema[SQLType](d["schema"])
+        return JobResult(rowCount=d["rowCount"], rows=d["rows"], schema=schema)
 
     @property
     def dict(self) -> JobResultDict:
