@@ -1,23 +1,17 @@
 
 name: Test with pytest
 
-# on:
-#   push:
-#     branches: [ 
-#       "master",
-#       "jp-testcontainsers"
-#     ]
-#   pull_request:
-#     branches: [ "master" ]
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 permissions:
   contents: read
 
 jobs:
   test:
-
-    runs-on: [ self-hosted ]
-
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.13
