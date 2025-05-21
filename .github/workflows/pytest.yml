@@ -3,9 +3,9 @@ name: Test with pytest
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "test-workflows" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "test-workflows"  ]
 
 permissions:
   contents: read
