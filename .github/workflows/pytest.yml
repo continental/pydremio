@@ -1,14 +1,11 @@
 
 name: Test with pytest
 
-# on:
-#   push:
-#     branches: [ 
-#       "master",
-#       "jp-testcontainsers"
-#     ]
-#   pull_request:
-#     branches: [ "master" ]
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 permissions:
   contents: read
@@ -16,7 +13,7 @@ permissions:
 jobs:
   test:
 
-    runs-on: [ self-hosted ]
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
