@@ -198,4 +198,4 @@ Contributions are welcome! Please open issues or pull requests for features, bug
 
 ## License
 
-This project is licensed under the BSD License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the BSD License. See the [LICENSE](LICENSE.txt) file for details.
