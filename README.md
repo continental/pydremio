@@ -15,7 +15,7 @@ Publishing to [PyPI](https://pypi.org/) is planned for the near future.
 
 You need Python **3.13** or higher.
 
-### Option 1: Install latest release
+### Option 1: Install via pip
 
 ```bash
 pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
@@ -28,7 +28,7 @@ python-dotenv == 1.0.1
 https://github.com/continental/pydremio/releases/latest/download/dremio-latest-py3-none-any.whl
 ```
 
-### Option 3: Install a specific version
+### Install a specific version
 
 ```bash
 pip install https://github.com/continental/pydremio/releases/download/<version>/dremio-<version>-py3-none-any.whl
@@ -105,7 +105,7 @@ dremio.create_catalog_item(folder)
 
 ## Methods
 
-All models are located in the [`models/`](./models/) directory.  
+All models are located in the [`models/`](src/dremio/models/) directory.  
 Below is an overview of available methods grouped by category.
 
 ### 🔐 Connection
