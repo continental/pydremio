@@ -1,5 +1,5 @@
 build:
-	py -m build .
+	python -m build .
 
 install build:
 	pip install --upgrade .[build]
