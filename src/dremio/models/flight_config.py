@@ -2,7 +2,7 @@ __all__ = ["FlightConfig", "FlightConfigDict"]
 
 
 from dataclasses import asdict, dataclass, field
-from typing import Any, Optional, TypedDict
+from typing import Any, Literal, Optional, TypedDict, overload
 
 import certifi
 
@@ -57,9 +57,26 @@ class FlightConfig:
     def uri(self, hostname: str) -> str:
         return f"{self.scheme}://{cut_scheme(hostname)}:{self.port}"
 
-    def get_headers(self, headers: dict[str, Any] = {}) -> list[tuple[bytes, bytes]]:
+    @overload
+    def get_headers(
+        self, headers: dict[str, Any] = {}, as_bytes: Literal[False] = False
+    ) -> list[tuple[str, str]]: ...
+
+    @overload
+    def get_headers(
+        self, headers: dict[str, Any] = {}, as_bytes: Literal[True] = True
+    ) -> list[tuple[bytes, bytes]]: ...
+
+    def get_headers(
+        self, headers: dict[str, Any] = {}, as_bytes: bool = False
+    ) -> list[tuple[bytes, bytes]] | list[tuple[str, str]]:
+        if as_bytes:
+            return [
+                (k.encode("utf-8"), f"{v}".encode("utf-8"))
+                for k, v in (self.session_properties | self.headers | headers).items()
+            ]
         return [
-            (k.encode("utf-8"), f"{v}".encode("utf-8"))
+            (k, f"{v}")
             for k, v in (self.session_properties | self.headers | headers).items()
         ]
 

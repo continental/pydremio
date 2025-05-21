@@ -9,9 +9,10 @@ from ..models import *
 from . import BaseClass
 from ._catalog import _MixinCatalog
 from ._sql import _MixinSQL
+from ._reflection import _MixinReflection
 
 
-class _MixinDataset(_MixinSQL, _MixinCatalog, BaseClass):
+class _MixinDataset(_MixinReflection, _MixinSQL, _MixinCatalog, BaseClass):
 
     def get_dataset(
         self,
@@ -235,3 +236,87 @@ class _MixinDataset(_MixinSQL, _MixinCatalog, BaseClass):
             target_ds.commit()
             target_ds = self.get_dataset(target_ds.path)
         return target_ds
+
+    def get_reflections_from_dataset(
+        self,
+        path: Union[list[str], str, None] = None,
+        *,
+        id: Union[UUID, str, None] = None,
+    ) -> list[Reflection]:
+        """Loads all reflections of the given dataset.
+
+        Args:
+            path (Union[list[str], str, None], optional): Path to dataset.
+            id (Union[UUID, str, None], optional): ID of dataset. Defaults to None.
+
+        Returns:
+            list[Reflection]: List of all reflections of this dataset. Empty list if there is none.
+        """
+        ds = self.get_dataset(path=path, id=id)
+        url = f"{self.hostname}/api/v3/dataset/{ds.id}/reflection"
+        response = requests.get(url, headers=self._headers)
+        self._raise_error(response)
+        try:
+            data = response.json()["data"]
+        except KeyError:
+            raise KeyError("Expected data-tag in reflections response, but not found")
+        return [cast(Reflection, reflection) for reflection in data]
+
+    def recommended_reflections(
+        self, dataset_id: str | UUID, type: Literal["ALL", "RAW", "AGG"] = "ALL"
+    ) -> list[NewReflection]:
+        """Retrieving reflection recommendations for a Dataset.
+
+        Args:
+            dataset_id (str|UUID): Id of dataset to reflect.
+            type (Literal[&quot;ALL&quot;, &quot;RAW&quot;, &quot;AGG&quot;], optional): The type of reflection recommendations you want to create and retrieve. Defaults to "ALL".
+
+        Returns:
+            Reflections (list[NewReflection]): List of recommended reflections.
+        """
+        url = f"{self.hostname}/api/v3/dataset/{dataset_id}/reflection/recommendation/{type}/"
+        response = requests.post(url, headers=self._headers)
+        self._raise_error(response)
+        try:
+            data = response.json()["data"]
+        except KeyError:
+            raise KeyError("Expected data-tag in reflections response, but not found")
+        return [cast(NewReflection, reflection) for reflection in data]
+
+    # This is here bc it needs `get_dataset`
+    def create_recommended_reflections(
+        self, dataset_id: str | UUID, type: Literal["ALL", "RAW", "AGG"] = "ALL"
+    ) -> list[Reflection]:
+        """Creating and Retrieving Reflection Recommendations for a Dataset.
+
+        Args:
+            dataset_id (str|UUID): Id of dataset to reflect.
+            type (Literal[&quot;ALL&quot;, &quot;RAW&quot;, &quot;AGG&quot;], optional): The type of reflection recommendations you want to create and retrieve. Defaults to "ALL".
+
+        Returns:
+            Reflections (list[Reflection]): List of all reflections of the dataset.
+        """
+        ds = self.get_dataset(id=dataset_id)
+        recommanded_reflections = self.recommended_reflections(
+            dataset_id=dataset_id, type=type
+        )
+        refs: list[Reflection] = []
+        for ref in recommanded_reflections:
+            name = f"{ds.path[-1]}_{ref.type}_{str(ds.id)[:4]}"
+            r = self.create_reflection(dataset_id=dataset_id, name=name, reflection=ref)
+            refs.append(r)
+        return refs
+
+    def refresh_dataset(self, path: Union[list[str], str]) -> None:
+        """Refresh dataset reflection"""
+        ds = self.get_dataset(path)
+        self._refresh_catalog(ds.id)
+
+    def refresh_dataset_metadata(self, path: Union[list[str], str]):
+        """Refresh metadata of physical datasets.
+
+        Args:
+            path (Union[list[str], str]): Path to physical dataset.
+        """
+        sql = f"ALTER TABLE {path_to_dotted(path)} REFRESH METADATA;"
+        self._http_query_result(sql)

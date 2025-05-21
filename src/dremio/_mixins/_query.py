@@ -46,7 +46,7 @@ class _MixinQuery(_MixinFlight, _MixinDataset, _MixinSQL, BaseClass):
         limit: Union[int, None] = None,
         offset: int = 0,
         timeout_in_sec: int = 1000,
-    ) -> tuple[JobResult, Job]:
+    ) -> JobResult:
         """Execute a SQL request and get the results. This method don't raise errors.
         Overloaded!!!
 
@@ -69,10 +69,18 @@ class _MixinQuery(_MixinFlight, _MixinDataset, _MixinSQL, BaseClass):
         limit: Union[int, None] = None,
         offset: int = 0,
         timeout_in_sec: int = 1000,
-    ):
+    ) -> JobResult:
         if method == "http":
-            return self._http_query_result(
+            job = self._http_start_job(
                 sql_request=sql_request,
+            )
+            if not job.id:
+                raise DremioConnectorError(
+                    "Error while starting job on sql query",
+                    f'Failed to start job on "{sql_request}"',
+                )
+            return self._http_wait_for_job_result(
+                id=job.id,
                 limit=limit,
                 offset=offset,
                 timeout_in_sec=timeout_in_sec,

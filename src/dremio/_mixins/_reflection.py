@@ -43,6 +43,18 @@ class _MixinReflection(_MixinCatalog, BaseClass):
         self._raise_error(response)
         return cast(Reflection, response.json())
 
+    def create_reflection(
+        self, dataset_id: str | UUID, name: str, reflection: NewReflection
+    ) -> Reflection:
+        url = f"{self.hostname}/api/v3/reflection"
+        payload = to_dict(reflection) | {
+            "datasetId": dataset_id,
+            "name": name,
+        }
+        response = requests.post(url, headers=self._headers, json=payload)
+        self._raise_error(response)
+        return cast(Reflection, response.json())
+
     def update_reflection(self, reflection: Reflection) -> Reflection:
         """Update the reflection.
 
@@ -58,8 +70,19 @@ class _MixinReflection(_MixinCatalog, BaseClass):
         self._raise_error(response)
         return cast(Reflection, response.json())
 
+    def delete_reflection(self, reflection_id: UUID | str) -> None:
+        url = f"{self.hostname}/api/v3/reflection/{reflection_id}"
+        response = requests.delete(url, headers=self._headers)
+        self._raise_error(response)
+        if response.status_code not in [200, 204]:
+            raise DremioConnectorError(
+                "Deletion of reflection failed",
+                f"Failed to delete reflection {reflection_id}",
+            )
+        return None
+
     def refresh_reflection(
-        self, reflection_id: Union[UUID, str], verbose: bool = False
+        self, reflection_id: UUID | str, verbose: bool = False
     ) -> Reflection:
         """Update the reflection.
 
@@ -111,7 +134,7 @@ class _MixinReflection(_MixinCatalog, BaseClass):
                     "CANNOT_ACCELERATE_SCHEDULED",
                 }:
                     if verbose:
-                        logging.warn(
+                        logging.warning(
                             (
                                 f"{refreshed_reflection.name} - Reflection refresh was not successful. Reflection status: {status}"
                             )

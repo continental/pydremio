@@ -199,3 +199,25 @@ dremio.delete_catalog_item(dataset.id)
 [Look here for more information about dataset manipulation](./DATASET.md)
 
 [Look here for more information about folder manipulation](./FOLDER.md)
+
+# Data Fetching
+
+The simplest way to get data out of Dremio is to query them with `Dremio.query()`.
+If you need more control over this process, you can use the namespaces `flight` and `http`:
+
+## Arrow Flight
+
+The `flight` namespace provides a bunch of useful arrow flight related methods and objects:
+
+- `Flight.client: pyarrow.FlightClient` (pre-configured)
+- `Flight.query(<sql>) -> pyarrow.Table` 
+- `Flight.query_dataset(<sql>) -> pyarrow.Table`
+- `Flight.query_stream(<sql>) -> pyarrow.FlightStreamReader`
+
+```python
+from dremio import Dremio
+
+dremio = Dremio(...)
+
+dremio.flight.query('SELECT * FROM A.B.C')
+```

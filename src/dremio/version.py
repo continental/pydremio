@@ -6,4 +6,4 @@ All requests and responses are typed as dataclasses. For further information rea
 """
 __author__ = "Holger Zernetsch, Jan Pietsch"
 __copyright__ = "Copyright 2024, Continental AG"
-__version__ = "0.2.1"
+__version__ = "0.3.1"

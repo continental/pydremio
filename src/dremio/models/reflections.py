@@ -70,3 +70,20 @@ class Reflection:
     dimensionFields: Optional[List[DimensionField]] = None
     measureFields: Optional[List[MeasureField]] = None
     displayFields: Optional[List[Field]] = None
+
+
+@dataclass
+class NewReflection:
+    type: Literal["RAW", "AGGREGATION"]
+    enabled: bool
+    entityType: Optional[str] = None
+    canAlter: Optional[bool] = None
+    partitionDistributionStrategy: Optional[str] = None
+    sortFields: Optional[List[Field]] = None
+    partitionFields: Optional[List[Field]] = None
+    distributionFields: Optional[List[Field]] = None
+    arrowCachingEnabled: Optional[bool] = None
+    canView: Optional[bool] = None
+    dimensionFields: Optional[List[DimensionField]] = None
+    measureFields: Optional[List[MeasureField]] = None
+    displayFields: Optional[List[Field]] = None

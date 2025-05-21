@@ -113,6 +113,67 @@ dataset = dremio.get_dataset('a.b.c') \
 
 Harder to debug but faster to write...
 
+### Reflections
+
+#### List Reflection of a Dataset
+
+To list all reflection of the dataset, just use `Dataset.reflections`
+
+```pyhon
+dataset = dremio.get_dataset(['a','b','c'])
+reflections:list[Reflections] = dataset.reflections
+```
+
+#### Create Reflections
+
+There are two ways to create reflections of a dataset:
+
+1. create reflections recommended from dremio
+2. create reflections manually
+
+The simplest way is the recommended reflection method:
+
+```python
+dataset = dremio.get_dataset(['a','b','c'])
+# to create reflections recommended from dremio (with optional param type="AGG"|"RAW"|"ALL", default "ALL")
+dataset.create_recommended_reflections()
+```
+
+For more advanced users is the `create_reflection` method.
+The `NewReflection` class follows the data model on [dremio/reflections](https://docs.dremio.com/current/reference/api/reflections/#creating-a-reflection).
+
+```python
+from dremio import NewReflection
+
+dataset = dremio.get_dataset(['a','b','c'])
+ref = NewReflection(...)
+dataset.create_reflection(name="c_agg", ref)
+```
+
+#### Delete Reflection
+
+For deletion of all reflections of a dataset, just use `Dataset.delete_reflections`:
+
+```python
+dataset = dremio.get_dataset(['a','b','c'])
+dataset.delete_reflections()
+```
+
+To delete only one reflection, use the `Dremio.delete_reflection` method:
+
+```python
+dremio.delete_reflection(reflection_id)
+```
+
+Example: To delete only raw reflections of a dataset:
+
+```python
+dataset = dremio.get_dataset(['a','b','c'])
+for ref in dataset.reflections:
+  if ref.type == "RAW":
+    dremio.delete_reflection(ref.id)
+```
+
 ### `run`
 
 With `Dataset.run` you can run a job on the dataset.

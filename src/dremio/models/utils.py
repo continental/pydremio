@@ -3,19 +3,6 @@ from typing import Literal, Optional, Any, TypeVar, Union
 
 
 @dataclass
-class TypeClass:
-    name: str
-    precision: Optional[int] = None
-    scale: Optional[int] = None
-
-
-@dataclass
-class Field:
-    name: str
-    type: TypeClass
-
-
-@dataclass
 class Message:
     message: str
 

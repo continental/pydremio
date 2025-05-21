@@ -79,12 +79,6 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
             raise DremioError("Folder not empty", f"Folder at {path} is not empty")
         return self.delete_catalog_item(folder.id)
 
-    def refresh_catalog(self, id: Union[UUID, str]) -> CatalogObject:
-        url = f"{self.hostname}/api/v3/catalog/{str(id)}/refresh"
-        response = requests.post(url, headers=self._headers)
-        self._raise_error(response)
-        return self.get_catalog_by_id(id)
-
     def _duplicate_folder(
         self,
         source_path: Union[list[str], str],

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.0] - 2025-03-31
+- add schema type support to `Dataset` object
+- implement full reflection support
+- update docs
+
 ## [v0.2.1] - 2025-02-13
 - refactor `JobResult` for better data exploration
 - update docs
