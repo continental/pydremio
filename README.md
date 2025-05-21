@@ -2,54 +2,61 @@
 
 ## Introduction
 
-*pydremio* is an API wrapper to interact with *Dremio*. It can be used to perform operations on datasets available in *Dremio* or to perform operations on meta data of these datasets. Interaction can be done via http (API) or via *Arrow Flight*. Since *Arrow Flight* is much more performant it should be used for operations on data.
+**pydremio** is a Python API wrapper for interacting with [Dremio](https://www.dremio.com/).  
+It allows you to perform operations on datasets and metadata within Dremio via either the **HTTP API** or **Arrow Flight**.  
+Since *Arrow Flight* offers significantly better performance, it is the recommended method for data operations.
 
-This repository includes the code for the wrapper itself, unit tests and examples to get started. The wrapper is distributed as wheel and can be found in the release-section. It is also planned to provide the wheel via *PyPi* in the near future.
+This repository includes the core library, unit tests, and example code to help you get started.
 
-## Getting Started
+The wrapper is distributed as a Python wheel (`.whl`) and can be found in the [Releases](https://github.com/continental/pydremio/releases) section.  
+Publishing to [PyPI](https://pypi.org/) is planned for the near future.
 
-- The latest version of *pydremio* can be installed by (*Python* v3.13 required):
+## Installation
+
+You need Python **3.13** or higher.
+
+### Option 1: Install latest release
 
 ```bash
 pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
 ```
 
-or via `requirements.txt`
+### Option 2: Use `requirements.txt`
 
 ```txt
 python-dotenv == 1.0.1
 https://github.com/continental/pydremio/releases/latest/download/dremio-latest-py3-none-any.whl
 ```
 
-- Other versions can be installed by:
+### Option 3: Install a specific version
 
-```
+```bash
 pip install https://github.com/continental/pydremio/releases/download/<version>/dremio-<version>-py3-none-any.whl
 ```
 
-## Basic usage
+## Getting Started
 
-### Login
+### Logging in
 
-The simplest way to use the *pydremio* is to create a logged in instance:
+The simplest way to create a logged-in client instance:
 
 ```python
 from dremio import Dremio
 
-dremio = Dremio(<hostname>,username=<username>,password=<password>)
+dremio = Dremio(<hostname>, username=<username>, password=<password>)
 ```
 
-Replace hostname, username and password (or PAT) with valid values or use environment variables (e.g., via `.env`-file). We highly recommend to NOT store your credentials in the code itself and use the env-approach instead!
+Replace the placeholders or, preferably, use environment variables (via a `.env` file) to avoid storing credentials in code.
 
-The env-file should look like this:
+**Example `.env` file:**
 
 ```txt
-DREMIO_USERNAME = "your_username@example.com"
-DREMIO_PASSWORD = "xyz-your-password-or-pat-xyz"
-DREMIO_HOSTNAME = "https://your.dremio.host.cloud"
+DREMIO_USERNAME="your_username@example.com"
+DREMIO_PASSWORD="xyz-your-password-or-pat-xyz"
+DREMIO_HOSTNAME="https://your.dremio.host.cloud"
 ```
 
-There is a function `from_env()` which does the job of loading for you:
+You can then use the convenience method:
 
 ```python
 from dremio import Dremio
@@ -59,7 +66,7 @@ load_dotenv()
 dremio = Dremio.from_env()
 ```
 
-More infos can be found here: [Dremio authentication](docs/DREMIO_LOGIN.md)
+More information here: [Dremio authentication](docs/DREMIO_LOGIN.md)
 
 ## Examples
 
@@ -71,70 +78,70 @@ from dremio import Dremio
 dremio = Dremio.from_env()
 
 ds = dremio.get_dataset("path.to.vds")
-polars_dataframe = ds.run().to_polars()
-pandas_dataframe = ds.run().to_pandas()
+polars_df = ds.run().to_polars()
+pandas_df = ds.run().to_pandas()
 ```
 
-### Create folder
+### Create a folder
 
 ```python
 from dremio import Dremio, NewFolder
 
-folder = NewFolder(['<path...>','<...to folder>','<folder name>'])
+folder = NewFolder(['<path>', '<to>', '<folder>'])
 dremio.create_catalog_item(folder)
 ```
 
-### Create a folder (with access control):
+### Create a folder with access control
 
 ```python
 from dremio import Dremio, NewFolder, AccessControlList, AccessControl
 
-ac = AccessControlList(users = [AccessControl('<user id>',['SELECT'])])
+ac = AccessControlList(users=[AccessControl('<user_id>', ['SELECT'])])
 
-folder = NewFolder(['<path...>','<...to folder>','<folder name>'])
+folder = NewFolder(['<path>', '<to>', '<folder>'])
 folder.accessControlList = ac
 dremio.create_catalog_item(folder)
 ```
 
 ## Methods
 
-All models can be found in [./models/](./models/). Here is a list of all available methods sorted by category:
+All models are located in the [`models/`](./models/) directory.  
+Below is an overview of available methods grouped by category.
 
-### Connection
+### 🔐 Connection
 
-- login(username:str && password:str) -> token:str
-- auth(auth:str=None || token:str=None) -> new Dremio instance
+- `login(username: str, password: str) -> str`
+- `auth(auth: str = None, token: str = None) -> Dremio`
 
-## 📚 Catalog
+### 📚 Catalog
 
-### Retrieval
+#### Retrieval
 - `get_catalog_by_id(id: UUID) -> CatalogObject`
 - `get_catalog_by_path(path: list[str]) -> CatalogObject`  
-  - `path` should be a list like `["space1", "weather"]`, but strings like `"space1/weather"` are also accepted.
+  - Accepts both list format (`["space", "dataset"]`) and string format (`"space/dataset"`)
 
-### Creation
+#### Creation
 - `create_catalog_item(item: NewCatalogObject | dict) -> CatalogObject`
 
-### Updating
+#### Updating
 - `update_catalog_item(id: UUID | item: NewCatalogObject | dict) -> CatalogObject`
 - `update_catalog_item_by_path(path: list[str], item: NewCatalogObject | dict) -> CatalogObject`
 
-### Deletion
+#### Deletion
 - `delete_catalog_item(id: UUID) -> bool`  
-  - Returns `True` if deletion was successful.
+  - Returns `True` if successful
 
-### Copying
+#### Copying
 - `copy_catalog_item_by_path(path: list[str], new_path: list[str]) -> CatalogObject`
 
-### Refreshing
+#### Refreshing
 - `refresh_catalog(id: UUID) -> CatalogObject`
 
-### Exploration
+#### Exploration
 - `get_catalog_tree(id: str = None, path: str | list[str] = None)`  
-  - Returns the full tree of catalog objects.  
-  - ⚠️ **Expensive** operation, intended for exploration and mapping only.
+  - ⚠️ Expensive operation, intended for exploration and mapping only
 
-## 📊 Dataset
+### 📊 Dataset
 
 - `get_dataset(path: list[str] | str | None = None, *, id: UUID | None = None) -> Dataset`
 - `create_dataset(path: list[str] | str, sql: str | SQLRequest, type: Literal['PHYSICAL_DATASET', 'VIRTUAL_DATASET'] = 'VIRTUAL_DATASET') -> Dataset`
@@ -142,7 +149,7 @@ All models can be found in [./models/](./models/). Here is a list of all availab
 - `copy_dataset(source_path: list[str] | str, target_path: list[str] | str) -> Dataset`
 - `reference_dataset(source_path: list[str] | str, target_path: list[str] | str) -> Dataset`
 
-## 🗂️ Folder
+### 🗂️ Folder
 
 - `get_folder(path: list[str] | str | None = None, *, id: UUID | None = None) -> Folder`
 - `create_folder(path: str | list[str]) -> Folder`
@@ -150,7 +157,7 @@ All models can be found in [./models/](./models/). Here is a list of all availab
 - `copy_folder(source_path: list[str] | str, target_path: list[str] | str, *, assume_privileges: bool = True, relative_references: bool = False) -> Folder`
 - `reference_folder(source_path: list[str] | str, target_path: list[str] | str, *, assume_privileges: bool = True) -> Folder`
 
-## 🤝 Collaboration
+### 🤝 Collaboration
 
 Wiki and tags are associated by the **ID of the collection item**.  
 The tags object contains an array of tags.
@@ -160,7 +167,7 @@ The tags object contains an array of tags.
 - `get_tags(id: str) -> Tags`
 - `set_tags(id: str, tags: Tags) -> Tags`
 
-## 🧠 SQL
+### 🧠 SQL
 
 - `sql(sql_request: SQLRequest) -> JobId`
 - `start_job_on_dataset(id: UUID) -> JobId`
@@ -169,7 +176,7 @@ The tags object contains an array of tags.
 - `get_job_results(id: UUID) -> JobResult`
 - `sql_results(sql_request: SQLRequest) -> Job | JobResult`
 
-## 👤 User
+### 👤 User
 
 - `get_users() -> list[User]`
 - `get_user(id: UUID) -> User`
@@ -177,4 +184,18 @@ The tags object contains an array of tags.
 - `create_user(user: User) -> User`
 - `update_user(id: UUID, user: User) -> User`
 - `delete_user(id: UUID, tag: str) -> bool`  
-  - Returns `True` if deletion was successful.
+  - Returns `True` if deletion was successful
+
+## Roadmap
+
+- [ ] Publish to PyPI
+- [ ] CLI support
+<!-- - [ ] Async support -->
+
+## Contributing
+
+Contributions are welcome! Please open issues or pull requests for features, bugs, or improvements.
+
+## License
+
+This project is licensed under the BSD License. See the [LICENSE](LICENSE) file for details.
