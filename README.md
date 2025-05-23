@@ -21,6 +21,18 @@ You need Python **3.13** or higher.
 pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
 ```
 
+If you are behind a **corporate firewall** and you need a **workaround** (NOT recommended for use in production!):
+
+```bash
+pip install --upgrade --force-reinstall \
+  --trusted-host pypi.org \
+  --trusted-host files.pythonhosted.org \
+  --trusted-host github.com \
+  --trusted-host objects.githubusercontent.com \
+  --cert False \
+  https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
+```
+
 ### Option 2: Use `requirements.txt`
 
 ```txt
@@ -65,10 +77,31 @@ from dotenv import load_dotenv
 load_dotenv()
 dremio = Dremio.from_env()
 ```
+By default pydremio assumes no TLS encryption. If you have set up TLS please use:
+
+```python
+from dremio import Dremio
+from dotenv import load_dotenv
+
+load_dotenv()
+dremio = Dremio.from_env()
+
+dremio.flight_config.tls = True
+```
+
+or set it up in your `.env`-file:
+
+```txt
+DREMIO_FLIGHT_TLS=TRUE
+```
 
 More information here: [Dremio authentication](docs/DREMIO_LOGIN.md)
 
 ## Examples
+
+- By default the queries are run with *Arrow Flight*.
+- The reason behind is that http-queries generate a lot of temporary cache. This cache is stored for longer time and for each query again. This may cause high storage-costs if you query big tables!
+- For small datasets this may not a good trade-off in duration. Try `run(method='http')` instead.
 
 ### Load a dataset
 
