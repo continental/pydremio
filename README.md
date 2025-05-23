@@ -77,10 +77,31 @@ from dotenv import load_dotenv
 load_dotenv()
 dremio = Dremio.from_env()
 ```
+By default pydremio assumes no TLS encryption. If you have set up TLS please use:
+
+```python
+from dremio import Dremio
+from dotenv import load_dotenv
+
+load_dotenv()
+dremio = Dremio.from_env()
+
+dremio.flight_config.tls = True
+```
+
+or set it up in your `.env`-file:
+
+```txt
+DREMIO_FLIGHT_TLS=TRUE
+```
 
 More information here: [Dremio authentication](docs/DREMIO_LOGIN.md)
 
 ## Examples
+
+- By default the queries are run with *Arrow Flight*.
+- The reason behind is that http-queries generate a lot of temporary cache. This cache is stored for longer time and for each query again. This may cause high storage-costs if you query big tables!
+- For small datasets this may not a good trade-off in duration. Try `run(method='http')` instead.
 
 ### Load a dataset
 
