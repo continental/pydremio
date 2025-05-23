@@ -21,6 +21,18 @@ You need Python **3.13** or higher.
 pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
 ```
 
+If you are behind a **corporate firewall** and you need a **workaround** (NOT recommended for use in production!):
+
+```bash
+pip install --upgrade --force-reinstall \
+  --trusted-host pypi.org \
+  --trusted-host files.pythonhosted.org \
+  --trusted-host github.com \
+  --trusted-host objects.githubusercontent.com \
+  --cert False \
+  https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
+```
+
 ### Option 2: Use `requirements.txt`
 
 ```txt
