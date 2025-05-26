@@ -125,8 +125,7 @@ pandas_df = ds.run().to_pandas()
 ```python
 from dremio import Dremio, NewFolder
 
-folder = NewFolder(['<path>', '<to>', '<folder>'])
-dremio.create_catalog_item(folder)
+folder = dremio.create_folder("path.to.folder")
 ```
 
 ### Create a folder with access control
@@ -134,11 +133,8 @@ dremio.create_catalog_item(folder)
 ```python
 from dremio import Dremio, NewFolder, AccessControlList, AccessControl
 
-ac = AccessControlList(users=[AccessControl('<user_id>', ['SELECT'])])
-
-folder = NewFolder(['<path>', '<to>', '<folder>'])
-folder.accessControlList = ac
-dremio.create_catalog_item(folder)
+folder = dremio.create_folder("path.to.folder")
+folder.set_access_for_user('<user_id>', ['SELECT'])
 ```
 
 ## Methods
