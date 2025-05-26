@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 packages = ["src/dremio"]
 
 [project]
-name = "dremio"
+name = "pydremio"
 version = "0.3.1"
 authors = [
   { name="Holger Zernetsch", email="6146286+holgerzer@users.noreply.github.com" },
