@@ -222,7 +222,7 @@ The tags object contains an array of tags.
 
 ## Roadmap
 
-- [ ] Publish to PyPI
+- [x] Publish to PyPI
 - [ ] CLI support
 <!-- - [ ] Async support -->
 
