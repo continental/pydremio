@@ -14,8 +14,13 @@ Publishing to [PyPI](https://pypi.org/) is planned for the near future.
 ## Installation
 
 You need Python **3.13** or higher.
-
 ### Option 1: Install via pip
+
+```bash
+pip install pydremio
+```
+
+### Option 2a: Install via pip from GitHub
 
 ```bash
 pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
@@ -33,17 +38,17 @@ pip install --upgrade --force-reinstall \
   https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
 ```
 
-### Option 2: Use `requirements.txt`
+#### Install a specific version
+
+```bash
+pip install https://github.com/continental/pydremio/releases/download/<version>/dremio-<version>-py3-none-any.whl
+```
+
+### Option 2b: Use `requirements.txt`
 
 ```txt
 python-dotenv == 1.0.1
 https://github.com/continental/pydremio/releases/latest/download/dremio-latest-py3-none-any.whl
-```
-
-### Install a specific version
-
-```bash
-pip install https://github.com/continental/pydremio/releases/download/<version>/dremio-<version>-py3-none-any.whl
 ```
 
 ## Getting Started
@@ -99,7 +104,7 @@ More information here: [Dremio authentication](docs/DREMIO_LOGIN.md)
 
 ## Examples
 
-- By default the queries are run with *Arrow Flight*.
+- By default, the queries are run with *Arrow Flight*.
 - The reason behind is that http-queries generate a lot of temporary cache. This cache is stored for longer time and for each query again. This may cause high storage-costs if you query big tables!
 - For small datasets this may not a good trade-off in duration. Try `run(method='http')` instead.
 
