@@ -134,7 +134,8 @@ folder = dremio.create_folder("path.to.folder")
 from dremio import Dremio, NewFolder, AccessControlList, AccessControl
 
 folder = dremio.create_folder("path.to.folder")
-folder.set_access_for_user('<user_id>', ['SELECT'])
+user_id = dremio.get_user_by_name('<user_name>')
+folder.set_access_for_user(user_id, ['SELECT'])
 ```
 
 ## Methods
