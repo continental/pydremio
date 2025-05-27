@@ -9,13 +9,18 @@ Since *Arrow Flight* offers significantly better performance, it is the recommen
 This repository includes the core library, unit tests, and example code to help you get started.
 
 The wrapper is distributed as a Python wheel (`.whl`) and can be found in the [Releases](https://github.com/continental/pydremio/releases) section.  
-Publishing to [PyPI](https://pypi.org/) is planned for the near future.
+Published to [PyPI](https://pypi.org/project/pydremio/).
 
 ## Installation
 
 You need Python **3.13** or higher.
-
 ### Option 1: Install via pip
+
+```bash
+pip install pydremio
+```
+
+### Option 2a: Install via pip from GitHub
 
 ```bash
 pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
@@ -33,17 +38,17 @@ pip install --upgrade --force-reinstall \
   https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
 ```
 
-### Option 2: Use `requirements.txt`
+#### Install a specific version
+
+```bash
+pip install https://github.com/continental/pydremio/releases/download/<version>/dremio-<version>-py3-none-any.whl
+```
+
+### Option 2b: Use `requirements.txt`
 
 ```txt
 python-dotenv == 1.0.1
 https://github.com/continental/pydremio/releases/latest/download/dremio-latest-py3-none-any.whl
-```
-
-### Install a specific version
-
-```bash
-pip install https://github.com/continental/pydremio/releases/download/<version>/dremio-<version>-py3-none-any.whl
 ```
 
 ## Getting Started
@@ -99,7 +104,7 @@ More information here: [Dremio authentication](docs/DREMIO_LOGIN.md)
 
 ## Examples
 
-- By default the queries are run with *Arrow Flight*.
+- By default, the queries are run with *Arrow Flight*.
 - The reason behind is that http-queries generate a lot of temporary cache. This cache is stored for longer time and for each query again. This may cause high storage-costs if you query big tables!
 - For small datasets this may not a good trade-off in duration. Try `run(method='http')` instead.
 
@@ -120,8 +125,7 @@ pandas_df = ds.run().to_pandas()
 ```python
 from dremio import Dremio, NewFolder
 
-folder = NewFolder(['<path>', '<to>', '<folder>'])
-dremio.create_catalog_item(folder)
+folder = dremio.create_folder("path.to.folder")
 ```
 
 ### Create a folder with access control
@@ -129,11 +133,8 @@ dremio.create_catalog_item(folder)
 ```python
 from dremio import Dremio, NewFolder, AccessControlList, AccessControl
 
-ac = AccessControlList(users=[AccessControl('<user_id>', ['SELECT'])])
-
-folder = NewFolder(['<path>', '<to>', '<folder>'])
-folder.accessControlList = ac
-dremio.create_catalog_item(folder)
+folder = dremio.create_folder("path.to.folder")
+folder.set_access_for_user('<user_id>', ['SELECT'])
 ```
 
 ## Methods
@@ -221,7 +222,7 @@ The tags object contains an array of tags.
 
 ## Roadmap
 
-- [ ] Publish to PyPI
+- [x] Publish to PyPI
 - [ ] CLI support
 <!-- - [ ] Async support -->
 
