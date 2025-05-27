@@ -9,7 +9,7 @@ Since *Arrow Flight* offers significantly better performance, it is the recommen
 This repository includes the core library, unit tests, and example code to help you get started.
 
 The wrapper is distributed as a Python wheel (`.whl`) and can be found in the [Releases](https://github.com/continental/pydremio/releases) section.  
-Publishing to [PyPI](https://pypi.org/) is planned for the near future.
+Published to [PyPI](https://pypi.org/project/pydremio/).
 
 ## Installation
 
