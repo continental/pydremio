@@ -24,7 +24,7 @@ pip install pydremio
 ### Option 2a: Install via pip from GitHub
 
 ```bash
-pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
+pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.2/dremio-0.3.2-py3-none-any.whl
 ```
 
 If you are behind a **corporate firewall** and you need a **workaround** (NOT recommended for use in production!):
@@ -36,7 +36,7 @@ pip install --upgrade --force-reinstall \
   --trusted-host github.com \
   --trusted-host objects.githubusercontent.com \
   --cert False \
-  https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
+  https://github.com/continental/pydremio/releases/download/v0.3.2/dremio-0.3.2-py3-none-any.whl
 ```
 
 #### Install a specific version
