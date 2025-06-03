@@ -14,6 +14,7 @@ Published to [PyPI](https://pypi.org/project/pydremio/).
 ## Installation
 
 You need Python **3.13** or higher.
+
 ### Option 1: Install via pip
 
 ```bash
