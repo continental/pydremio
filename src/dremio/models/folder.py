@@ -3,6 +3,8 @@ from uuid import UUID
 from typing import Optional, Literal, Union
 from typing_extensions import Self
 
+from dremio.utils.decorators import experimental
+
 from ..exceptions import DremioConnectorError
 
 from .custom_objects import CatalogElement
@@ -132,3 +134,23 @@ class Folder(DremioAccessible, DremioObject):
                 "Folder not deleted", f"Folder {self.path} could not be deleted"
             )
         del self
+
+    @experimental
+    def dump(self, depth: int|None = None) -> dict:
+        """⚠️ EXPERIMENTAL: Dump the folder with all children as a dictionary. Same as `Dremio.dump_folder(this_folder_path, depth=depth)`.
+
+        Parameters:
+            depth (int|None, optional): The depth of the dump. If None, it will dump all children. Defaults to None.
+
+        Raises:
+            TypeError: raises if no dremio instance is connected
+
+        Returns:
+            dict: the dumped folder as a dictionary
+        """
+        if not self._dremio:
+            raise TypeError(
+                "This Folder has no dremio instance!\nTry to dump the folder directly in the dremio sdk"
+            )
+        return self._dremio.dump_folder(self.path, depth=depth)
+

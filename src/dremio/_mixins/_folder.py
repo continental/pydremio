@@ -1,7 +1,8 @@
 __all__ = ["_MixinFolder"]  # this is like `export ...` in typescript
 import logging
 import re
-import requests
+
+from dremio.utils.decorators import experimental
 
 from ..utils.converter import path_to_list, path_to_dotted
 from ..models import *
@@ -291,3 +292,30 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
             relative_references=False,
             overwrite_existing=overwrite_existing,
         )
+
+    @experimental
+    def dump_folder(self, path: list[str] | str, depth:int|None=None) -> dict:
+        """⚠️ EXPERIMENTAL: Dump the folder and all children to a dictionary.
+
+        Parameters:
+            path (list[str] | str): The path of the folder to dump.
+            depth (int | None, optional): The depth of the dump. If None, it will dump all children. Defaults to None.
+
+        Returns:
+            dict: The folder and all children as a dictionary.
+        """
+        folder = self.get_folder(path)
+        folder_dict = folder.to_dict()
+
+        folder_dict["children"] = []  # clear children to avoid recursion 
+        for child in folder:
+            if child.type == "CONTAINER" and child.containerType == "FOLDER" and (depth is None or depth > 0):
+                child = self.dump_folder(child.path, depth=depth-1 if depth is not None else None)
+            elif child.type == "DATASET":
+                ds = self.get_dataset(child.path)
+                child = ds.to_dict()
+            else:
+                logging.warning(f"Child {child.path} is not a folder or dataset, skipping it.")
+                continue
+            folder_dict['children'].append(child)
+        return folder_dict
