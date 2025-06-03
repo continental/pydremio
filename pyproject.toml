@@ -5,6 +5,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/dremio"]
 
+[tool.setuptools.package-data]
+"pydremio" = ["py.typed"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [project]
 name = "pydremio"
 version = "0.3.1"
