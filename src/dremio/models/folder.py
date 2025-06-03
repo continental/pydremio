@@ -3,6 +3,8 @@ from uuid import UUID
 from typing import Optional, Literal, Union
 from typing_extensions import Self
 
+from dremio.utils.decorators import experimental
+
 from ..exceptions import DremioConnectorError
 
 from .custom_objects import CatalogElement
@@ -133,8 +135,9 @@ class Folder(DremioAccessible, DremioObject):
             )
         del self
 
+    @experimental
     def dump(self, depth: int|None = None) -> dict:
-        """Dump the folder with all children as a dictionary. Same as `Dremio.dump_folder(this_folder_path, depth=depth)`.
+        """⚠️ EXPERIMENTAL: Dump the folder with all children as a dictionary. Same as `Dremio.dump_folder(this_folder_path, depth=depth)`.
 
         Parameters:
             depth (int|None, optional): The depth of the dump. If None, it will dump all children. Defaults to None.

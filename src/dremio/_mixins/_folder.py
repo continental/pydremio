@@ -2,6 +2,8 @@ __all__ = ["_MixinFolder"]  # this is like `export ...` in typescript
 import logging
 import re
 
+from dremio.utils.decorators import experimental
+
 from ..utils.converter import path_to_list, path_to_dotted
 from ..models import *
 
@@ -291,8 +293,9 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
             overwrite_existing=overwrite_existing,
         )
 
+    @experimental
     def dump_folder(self, path: list[str] | str, depth:int|None=None) -> dict:
-        """Dump the folder and all children to a dictionary.
+        """⚠️ EXPERIMENTAL: Dump the folder and all children to a dictionary.
 
         Parameters:
             path (list[str] | str): The path of the folder to dump.
