@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
 from uuid import UUID
 from typing import Any, Type, Union
+import re
 
 
 def to_dict(d) -> dict:
@@ -18,23 +19,30 @@ def to_dict(d) -> dict:
 
 
 def path_to_list(path: Union[str, list[str]]) -> list[str]:
-    if type(path) == str:
-        path = (
-            path.replace(", ", ".").replace("[", "").replace("]", "").replace("'", '"')
-        )
-    if type(path) == str and "." in path:
-        path = path.split(".")
+    if isinstance(path, list):
+        return [p.strip().replace('"', "") for p in path if p]
 
-    # if type(path) == str and '/' in path:
-    #   path = path.split('/')
+    if not isinstance(path, str):
+        raise ValueError("path must be a string or list of strings")
 
-    if type(path) == str:
-        path = [path]
+    # Regex to match either:
+    # - single-quoted strings (with escaped quotes inside), or
+    # - unquoted dot-separated segments
+    token_pattern = re.compile(r"""
+        '([^'\\]*(?:\\.[^'\\]*)*)' |   # Single-quoted strings with escapes
+        ([^.]+)                        # Or plain unquoted segments
+    """, re.VERBOSE)
 
-    if type(path) == list or isinstance(path, list):
-        path = [path.replace('"', "").strip() for path in path]
+    tokens = []
+    for match in token_pattern.finditer(path):
+        quoted, unquoted = match.groups()
+        if quoted is not None:
+            # Unescape single quotes
+            tokens.append(quoted.replace("\\'", "'"))
+        elif unquoted is not None:
+            tokens.append(unquoted.strip())
 
-    return [el for el in list(path) if el]
+    return [t for t in tokens if t]
 
 
 def path_to_dotted(path: Union[list[str], str]) -> str:
