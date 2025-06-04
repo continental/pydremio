@@ -285,9 +285,11 @@ class Dremio:
         url = f"{self.hostname}/api/v3/catalog/{str(id) or ''}"
         if path:
             path = path_to_list(path)
+            print(path)
             if isinstance(path, list):
-                path = "/".join(path)
-            quoted_path = parse.quote(path).replace(" ", "%20").replace("%2F", "/")
+                # Quote each part separately to preserve literal slashes
+                quoted_parts = [parse.quote(part, safe="") for part in path]
+                quoted_path = "/".join(quoted_parts)
             url = f"{self.hostname}/api/v3/catalog/by-path/{quoted_path}"
         response = requests.get(url, headers=self._headers)
         if response.status_code == 401:
