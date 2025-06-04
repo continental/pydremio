@@ -20,27 +20,27 @@ def to_dict(d) -> dict:
 
 def path_to_list(path: Union[str, list[str]]) -> list[str]:
     if isinstance(path, list):
-        return [p.strip().replace('"', "") for p in path if p]
+        # Preserve blanks, just remove surrounding double quotes if any
+        return [p.replace('"', "") for p in path if p]
 
     if not isinstance(path, str):
         raise ValueError("path must be a string or list of strings")
 
-    # Regex to match either:
-    # - single-quoted strings (with escaped quotes inside), or
-    # - unquoted dot-separated segments
+    # Regex to match:
+    # - Single-quoted strings with escapes
+    # - Or plain dot-separated unquoted segments
     token_pattern = re.compile(r"""
-        '([^'\\]*(?:\\.[^'\\]*)*)' |   # Single-quoted strings with escapes
-        ([^.]+)                        # Or plain unquoted segments
+        '([^'\\]*(?:\\.[^'\\]*)*)' |   # Group 1: quoted
+        ([^.]+)                        # Group 2: unquoted
     """, re.VERBOSE)
 
     tokens = []
     for match in token_pattern.finditer(path):
         quoted, unquoted = match.groups()
         if quoted is not None:
-            # Unescape single quotes
             tokens.append(quoted.replace("\\'", "'"))
         elif unquoted is not None:
-            tokens.append(unquoted.strip())
+            tokens.append(unquoted.replace('"', ""))  # Preserve blanks, no strip
 
     return [t for t in tokens if t]
 
