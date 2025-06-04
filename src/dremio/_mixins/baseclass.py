@@ -285,7 +285,6 @@ class Dremio:
         url = f"{self.hostname}/api/v3/catalog/{str(id) or ''}"
         if path:
             path = path_to_list(path)
-            print(path)
             if isinstance(path, list):
                 # Quote each part separately to preserve literal slashes
                 quoted_parts = [parse.quote(part, safe="") for part in path]
