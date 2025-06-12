@@ -1,6 +1,6 @@
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from uuid import UUID
-from typing import Any, Type, Union
+from typing import Union
 
 
 def to_dict(d) -> dict:
@@ -18,20 +18,20 @@ def to_dict(d) -> dict:
 
 
 def path_to_list(path: Union[str, list[str]]) -> list[str]:
-    if type(path) == str:
+    if isinstance(path, str):
         path = (
             path.replace(", ", ".").replace("[", "").replace("]", "").replace("'", '"')
         )
-    if type(path) == str and "." in path:
+    if isinstance(path, str) and "." in path:
         path = path.split(".")
 
     # if type(path) == str and '/' in path:
     #   path = path.split('/')
 
-    if type(path) == str:
+    if isinstance(path, str):
         path = [path]
 
-    if type(path) == list or isinstance(path, list):
+    if isinstance(path, list):
         path = [path.replace('"', "").strip() for path in path]
 
     return [el for el in list(path) if el]

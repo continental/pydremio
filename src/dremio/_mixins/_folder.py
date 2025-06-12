@@ -1,11 +1,14 @@
 __all__ = ["_MixinFolder"]  # this is like `export ...` in typescript
 import logging
 import re
+from typing import Optional, Union, Literal
+from uuid import UUID
 
-from dremio.utils.decorators import experimental
+from ..utils.decorators import experimental
 
 from ..utils.converter import path_to_list, path_to_dotted
-from ..models import *
+from ..models import Folder, NewFolder, Dataset, DremioError
+from ..models.utils import cast
 
 from . import BaseClass
 from ._catalog import _MixinCatalog
@@ -294,7 +297,7 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
         )
 
     @experimental
-    def dump_folder(self, path: list[str] | str, depth:int|None=None) -> dict:
+    def dump_folder(self, path: list[str] | str, depth: int | None = None) -> dict:
         """⚠️ EXPERIMENTAL: Dump the folder and all children to a dictionary.
 
         Parameters:
@@ -307,15 +310,130 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
         folder = self.get_folder(path)
         folder_dict = folder.to_dict()
 
-        folder_dict["children"] = []  # clear children to avoid recursion 
+        folder_dict["children"] = []  # clear children to avoid recursion
         for child in folder:
-            if child.type == "CONTAINER" and child.containerType == "FOLDER" and (depth is None or depth > 0):
-                child = self.dump_folder(child.path, depth=depth-1 if depth is not None else None)
+            if (
+                child.type == "CONTAINER"
+                and child.containerType == "FOLDER"
+                and (depth is None or depth > 0)
+            ):
+                child = self.dump_folder(
+                    child.path, depth=depth - 1 if depth is not None else None
+                )
             elif child.type == "DATASET":
                 ds = self.get_dataset(child.path)
                 child = ds.to_dict()
             else:
-                logging.warning(f"Child {child.path} is not a folder or dataset, skipping it.")
+                logging.warning(
+                    f"Child {child.path} is not a folder or dataset, skipping it."
+                )
                 continue
-            folder_dict['children'].append(child)
+            folder_dict["children"].append(child)
         return folder_dict
+
+    @experimental
+    def restore_folder(
+        self,
+        folder_dump: dict,
+        path: Optional[list[str] | str] = None,
+        overwrite_existing: bool = False,
+    ) -> Folder:
+        """⚠️ EXPERIMENTAL: Restore a folder from a dump. This is currently only supported on the same Dremio instance.
+
+        Parameters:
+            folder_dump (dict): The folder dump to restore.
+            path (Optional[list[str]|str], optional): The path to restore the folder to. If None, it will use the path from the dump. Defaults to None.
+            overwrite_existing (bool, optional): Overwrite existing folders and datasets with the same path in the target folder. Defaults to False.
+
+        Returns:
+            Folder: The restored folder.
+        """
+        if path is None:
+            path = folder_dump.get("path", None)
+        if path is None:
+            raise ValueError(
+                "Path must be provided in the folder dump or as an argument."
+            )
+        if isinstance(path, str):
+            path = path_to_list(path)
+
+        _datasets_queue: list[Dataset] = []
+
+        f = self._restore_folder_recursive(
+            folder_dump, path, overwrite_existing, _datasets_queue
+        )
+
+        for ds in _datasets_queue:
+            try:
+                self.create_catalog_item(ds)
+            except DremioError as e:
+                if e.status_code == 409 and not overwrite_existing:
+                    logging.info(
+                        f"Dataset {path_to_dotted(ds.path)} already exists, skipping creation."
+                    )
+                    continue
+                elif e.status_code == 409 and overwrite_existing:
+                    logging.info(
+                        f"Dataset {path_to_dotted(ds.path)} already exists and will be overwritten."
+                    )
+                    self.delete_dataset(ds.path)
+                    self.create_catalog_item(ds)
+                    continue
+                elif e.status_code == 400:
+                    _datasets_queue.append(ds)
+                    continue
+                raise e
+            except Exception as e:
+                logging.error(
+                    f"Error while committing dataset {path_to_dotted(ds.path)} after restoring folder.",
+                    e,
+                )
+        return self.get_folder(f.path)
+
+    def _restore_folder_recursive(
+        self,
+        folder_dump: dict,
+        path: list[str],
+        overwrite_existing: bool = False,
+        _datasets_queue: list[Dataset] = [],
+    ) -> Folder:
+        """Helper function to restore a folder recursively from a dump."""
+        source_path = path_to_list(folder_dump.get("path", []))
+        target_path = path_to_list(path)
+        source = cast(Folder, folder_dump)
+        source.path = target_path
+        try:
+            self.create_catalog_item(source)
+        except DremioError as e:
+            if e.status_code == 409 and overwrite_existing:
+                logging.info(
+                    f"Folder {path_to_dotted(source_path)} already exists and will be overwritten."
+                )
+                self.delete_folder(path, recursive=True)
+                self.create_catalog_item(source)
+            else:
+                raise e
+        for child in folder_dump.get("children", []):
+            entity_type = child.get("entityType", None)
+            if entity_type == "folder":
+                child_path = path + [path_to_list(child.get("path", []))[-1]]
+                self._restore_folder_recursive(
+                    child, child_path, overwrite_existing, _datasets_queue
+                )
+            elif entity_type == "dataset":
+                ds = cast(Dataset, child)
+                ds.path = path + [ds.path[-1]]
+                ds.sql = re.sub(
+                    r"\"?"
+                    + r"\"?\.\"?".join(source_path)
+                    + r"\"?",  # find 'Application.TEST_FOLDER' and '"Application"."TEST_FOLDER"'
+                    path_to_dotted(target_path),
+                    ds.sql or "",
+                )
+                _datasets_queue.append(ds)
+            else:
+                logging.warning(
+                    f"Child {child.get('path', 'unknown')} is not a folder or dataset, skipping it."
+                )
+
+        return self.get_folder(path)  # return the folder object for the path
