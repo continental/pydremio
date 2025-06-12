@@ -348,8 +348,9 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
         Returns:
             Folder: The restored folder.
         """
+        source_root_path = path_to_list(folder_dump.get("path", []))
         if path is None:
-            path = folder_dump.get("path", None)
+            path = source_root_path
         if path is None:
             raise ValueError(
                 "Path must be provided in the folder dump or as an argument."
@@ -360,7 +361,7 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
         _datasets_queue: list[Dataset] = []
 
         f = self._restore_folder_recursive(
-            folder_dump, path, overwrite_existing, _datasets_queue
+            folder_dump, path, source_root_path, path, overwrite_existing, _datasets_queue
         )
 
         for ds in _datasets_queue:
@@ -394,6 +395,8 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
         self,
         folder_dump: dict,
         path: list[str],
+        source_root_path: list[str],
+        target_root_path: list[str],
         overwrite_existing: bool = False,
         _datasets_queue: list[Dataset] = [],
     ) -> Folder:
@@ -416,18 +419,18 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
         for child in folder_dump.get("children", []):
             entity_type = child.get("entityType", None)
             if entity_type == "folder":
-                child_path = path + [path_to_list(child.get("path", []))[-1]]
+                child_path = target_path + [path_to_list(child.get("path", []))[-1]]
                 self._restore_folder_recursive(
-                    child, child_path, overwrite_existing, _datasets_queue
+                    child, child_path, source_root_path, target_root_path, overwrite_existing, _datasets_queue
                 )
             elif entity_type == "dataset":
                 ds = cast(Dataset, child)
-                ds.path = path + [ds.path[-1]]
+                ds.path = target_path + [path_to_list(ds.path)[-1]]
                 ds.sql = re.sub(
                     r"\"?"
-                    + r"\"?\.\"?".join(source_path)
+                    + r"\"?\.\"?".join(source_root_path)
                     + r"\"?",  # find 'Application.TEST_FOLDER' and '"Application"."TEST_FOLDER"'
-                    path_to_dotted(target_path),
+                    path_to_dotted(target_root_path),
                     ds.sql or "",
                 )
                 _datasets_queue.append(ds)
