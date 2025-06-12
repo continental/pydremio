@@ -18,24 +18,31 @@ def to_dict(d) -> dict:
 
 
 def path_to_list(path: Union[str, list[str]]) -> list[str]:
-    if isinstance(path, str):
-        path = (
-            path.replace(", ", ".").replace("[", "").replace("]", "").replace("'", '"')
-        )
-    if isinstance(path, str) and "." in path:
-        path = path.split(".")
-
-    # if type(path) == str and '/' in path:
-    #   path = path.split('/')
-
-    if isinstance(path, str):
-        path = [path]
-
     if isinstance(path, list):
-        path = [path.replace('"', "").strip() for path in path]
+        # Preserve blanks, just remove surrounding double quotes if any
+        return [p.replace('"', "") for p in path if p]
 
-    return [el for el in list(path) if el]
+    if not isinstance(path, str):
+        raise ValueError("path must be a string or list of strings")
 
+    # Regex to match:
+    # - Single-quoted strings with escapes
+    # - Or plain dot-separated unquoted segments
+    token_pattern = re.compile(r"""
+        '([^'\\]*(?:\\.[^'\\]*)*)' |   # Group 1: quoted
+        ([^.]+)                        # Group 2: unquoted
+    """, re.VERBOSE)
+
+    tokens = []
+    for match in token_pattern.finditer(path):
+        quoted, unquoted = match.groups()
+        if quoted is not None:
+            tokens.append(quoted.replace("\\'", "'"))
+        elif unquoted is not None:
+            tokens.append(unquoted.replace('"', ""))  # Preserve blanks, no strip
+
+    return [t for t in tokens if t]
+    
 
 def path_to_dotted(path: Union[list[str], str]) -> str:
     path = path_to_list(path)
