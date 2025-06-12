@@ -1,6 +1,6 @@
-from dataclasses import dataclass, asdict
+from dataclasses import asdict
 from uuid import UUID
-from typing import Any, Type, Union
+from typing import Union
 import re
 
 
