@@ -14,6 +14,7 @@ Published to [PyPI](https://pypi.org/project/pydremio/).
 ## Installation
 
 You need Python **3.13** or higher.
+
 ### Option 1: Install via pip
 
 ```bash
@@ -23,7 +24,7 @@ pip install pydremio
 ### Option 2a: Install via pip from GitHub
 
 ```bash
-pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
+pip install --upgrade --force-reinstall https://github.com/continental/pydremio/releases/download/v0.3.2/dremio-0.3.2-py3-none-any.whl
 ```
 
 If you are behind a **corporate firewall** and you need a **workaround** (NOT recommended for use in production!):
@@ -35,7 +36,7 @@ pip install --upgrade --force-reinstall \
   --trusted-host github.com \
   --trusted-host objects.githubusercontent.com \
   --cert False \
-  https://github.com/continental/pydremio/releases/download/v0.3.1/dremio-0.3.1-py3-none-any.whl
+  https://github.com/continental/pydremio/releases/download/v0.3.2/dremio-0.3.2-py3-none-any.whl
 ```
 
 #### Install a specific version
@@ -134,7 +135,8 @@ folder = dremio.create_folder("path.to.folder")
 from dremio import Dremio, NewFolder, AccessControlList, AccessControl
 
 folder = dremio.create_folder("path.to.folder")
-folder.set_access_for_user('<user_id>', ['SELECT'])
+user_id = dremio.get_user_by_name('<user_name>')
+folder.set_access_for_user(user_id, ['SELECT'])
 ```
 
 ## Methods

@@ -1,6 +1,7 @@
 from dataclasses import asdict
 from uuid import UUID
 from typing import Union
+import re
 
 
 def to_dict(d) -> dict:
@@ -42,7 +43,7 @@ def path_to_list(path: Union[str, list[str]]) -> list[str]:
             tokens.append(unquoted.replace('"', ""))  # Preserve blanks, no strip
 
     return [t for t in tokens if t]
-    
+
 
 def path_to_dotted(path: Union[list[str], str]) -> str:
     path = path_to_list(path)
