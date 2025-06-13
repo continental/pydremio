@@ -336,6 +336,7 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
         self,
         folder_dump: dict,
         path: Optional[list[str] | str] = None,
+        name: Optional[str] = None,
         overwrite_existing: bool = False,
     ) -> Folder:
         """⚠️ EXPERIMENTAL: Restore a folder from a dump. This is currently only supported on the same Dremio instance.
@@ -343,6 +344,7 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
         Parameters:
             folder_dump (dict): The folder dump to restore.
             path (Optional[list[str]|str], optional): The path to restore the folder to. If None, it will use the path from the dump. Defaults to None.
+            name (Optional[str], optional): The name of the folder to restore. If None, it will use the name from the dump. Defaults to None.
             overwrite_existing (bool, optional): Overwrite existing folders and datasets with the same path in the target folder. Defaults to False.
 
         Returns:
@@ -357,6 +359,12 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
             )
         if isinstance(path, str):
             path = path_to_list(path)
+
+        if not name:
+            name = source_root_path[-1]
+
+        if path[-1] != name:
+            path = path + [name]
 
         _datasets_queue: list[Dataset] = []
 
