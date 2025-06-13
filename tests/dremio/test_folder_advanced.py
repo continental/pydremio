@@ -33,11 +33,11 @@ def test_folder_dump_and_restore(
     dump = folder.dump()
 
     # restore the folder
-    restore_folder_path = list(folder.path)
-    restore_folder_path[-1] = random_name()
-    restored_folder = dremio.restore_folder(dump, restore_folder_path)
+    restore_folder_path = list(folder.path)[:-1]
+    restore_folder_name = random_name()
+    restored_folder = dremio.restore_folder(dump, restore_folder_path, restore_folder_name)
 
-    assert restore_folder_path == restored_folder.path
+    assert restore_folder_path + [restore_folder_name] == restored_folder.path
 
     assert restored_folder.path[:-1] == folder.path[:-1]
     assert restored_folder.path[-1] != folder.path[-1]
