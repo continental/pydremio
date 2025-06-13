@@ -363,8 +363,7 @@ class _MixinFolder(_MixinDataset, _MixinCatalog, BaseClass):
         if not name:
             name = source_root_path[-1]
 
-        if path[-1] != name:
-            path = path + [name]
+        path = path + [name]
 
         _datasets_queue: list[Dataset] = []
 
