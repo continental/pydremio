@@ -1,3 +1,4 @@
+
 name: Build and Draft Release
 
 on:
@@ -7,6 +8,7 @@ on:
 
 jobs:
   build-and-release:
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -32,6 +34,16 @@ jobs:
     - name: Run make to update version
       run: make version=${{ env.VERSION }} update version
 
+    - name: Run the Action
+      uses: devops-infra/action-commit-push@master
+      with:
+        github_token: "${{ secrets.GITHUB_TOKEN }}"
+        commit_prefix: "[AUTO] "
+        commit_message: "Update version to ${{ env.VERSION }}"
+        force: false
+        target_branch: "main"
+      continue-on-error: true
+
     - name: Build distribution
       run: python -m build .
 
@@ -45,9 +57,10 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
-
-
-
-
-
+    - name: Uplaod to PyPI
+      run: |
+        python -m pip install --upgrade twine
+        twine upload dist/*
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
