@@ -9,3 +9,5 @@ output.parquet
 draft*
 */old_dremio.py
 uv.lock
+sandbox_*.py
+data.json
