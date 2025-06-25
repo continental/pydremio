@@ -99,7 +99,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
         print(create_sql)
         # will be only created if table not exists!
         try:
-            # self.query(create_sql)
+            self.query(create_sql)
             pass
         except DremioError as e:
             if e.status_code == 409:
@@ -120,7 +120,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
                 INSERT INTO {full_table_path} VALUES
                 {",\n".join(value_rows)}
                 """
-                # self.query(insert_sql)
+                self.query(insert_sql)
                 value_rows = []
 
         if value_rows:
@@ -128,7 +128,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
             INSERT INTO {full_table_path} VALUES
             {",\n".join(value_rows)}
             """
-            # self.query(insert_sql)
+            self.query(insert_sql)
 
     def create_table_from_sql(
         self, sql: str, path: list[str] | str, name: Optional[str] = None
