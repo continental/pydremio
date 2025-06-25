@@ -13,6 +13,7 @@ from ._mixins import (
     _MixinSQL,
     _MixinQuery,
     _MixinDataset,
+    _MixinTable,
     _MixinFolder,
     _MixinFlight,
     _MixinReflection,
@@ -25,6 +26,7 @@ from ._mixins import (
 class Dremio(
     _MixinRole,
     _MixinUser,
+    _MixinTable,
     _MixinQuery,
     _MixinFlight,
     _MixinFolder,
