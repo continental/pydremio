@@ -96,7 +96,6 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
           {columns_sql}
         )
         """
-        print(create_sql)
         # will be only created if table not exists!
         try:
             self.query(create_sql)
