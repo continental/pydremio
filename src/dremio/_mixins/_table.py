@@ -4,7 +4,9 @@ import polars as pl
 from datetime import datetime, date
 from typing import Optional
 
-from ..utils.converter import path_to_list
+from traitlets import Bool
+
+from ..utils.converter import path_to_dotted, path_to_list
 from ..exceptions import DremioError
 
 
@@ -155,7 +157,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
         except DremioError as e:
             if e.status_code == 409:
                 e.errorMessage = (
-                    f"Table '{full_table_path}' already exists. Use update_dataset() to modify it."
+                    f"Table '{full_table_path}' already exists. Use update_table() to modify it."
                     + e.errorMessage
                 )
                 raise e
@@ -195,73 +197,91 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
                 "from must be a Pandas DataFrame, Polars DataFrame or a SQL query string."
             )
 
-    # TODO: implement update_table() method like create_table() but with MERGE INTO logic
+    def update_table_from_sql(self, sql: str, on: str, path: str) -> None:
+        """
+        Updates or inserts rows into an existing Iceberg table in Dremio using MERGE INTO.
+    
+        Args:
+            dremio: Dremio connection instance.
+            path: Path in the Dremio catalog.
+            sql: SQL query string as source.
+            on: SQL ON clause string to define matching criteria (e.g., "t.id = s.id"). Use "s." and "t." as prefix to indicate source and target column. 
+        Raises:
+            ValueError: If neither or both `df` and `sql` are provided.
+            RuntimeError: If the target table does not exist.
+        """
+    
+        if not isinstance(sql, str):
+            raise TypeError("sql must be a string.")
+        
+        try:
+            dataset = self.get_catalog_by_path(path)
+            if not dataset:
+                raise RuntimeError(f"Table '{path}' does not exist. Use create_table() instead.")
+        except DremioError as e:
+            if "No such file or directory" in str(e):
+                raise RuntimeError(f"Table '{path}' does not exist.")
+            else:
+                raise
+    
+        # Use SQL query directly as source
+        merge_sql = f"""
+        MERGE INTO {path} AS t
+        USING ({sql}) AS s
+        ON ({on})
+        WHEN MATCHED THEN UPDATE SET *
+        WHEN NOT MATCHED THEN INSERT *
+        """
+        print(merge_sql)
+        self.query(merge_sql)
 
-    # def update_table(self, path: str, name: Optional[str] = None, *, on: dict[str,str] = {'id':'id'}, df: Optional[pd.DataFrame | pl.DataFrame] = None, sql: Optional[str] = None) -> None:
-    #     """
-    #     Updates or inserts rows into an existing Iceberg table in Dremio using MERGE INTO.
-    #
-    #     Args:
-    #         dremio: Dremio connection instance.
-    #         target_path: Path in the Dremio catalog.
-    #         table_name: Target table to merge into.
-    #         on: SQL ON clause string to define matching rows (e.g., "t.id = s.id").
-    #         df: Optional DataFrame to use as source data.
-    #         sql: Optional SQL query string as source.
-    #     Raises:
-    #         ValueError: If neither or both `df` and `sql` are provided.
-    #         RuntimeError: If the target table does not exist.
-    #     """
-    #
-    #     if df is None and sql is None:
-    #         raise ValueError("You must provide either a DataFrame or a SQL query to update the table.")
-    #     if df is not None and sql is not None:
-    #         raise ValueError("Provide only one of DataFrame or SQL query, not both.")
-    #
-    #     full_table_path = f"{target_path}.{table_name}"
-    #
-    #     # Check if the table exists
-    #     # TODO: see above!
-    #     try:
-    #         dataset = self.get_catalog_by_path(full_table_path)
-    #         if not dataset:
-    #             raise RuntimeError(f"Table '{full_table_path}' does not exist. Use create_table() instead.")
-    #     except DremioError as e:
-    #         if "No such file or directory" in str(e):
-    #             raise RuntimeError(f"Table '{full_table_path}' does not exist.")
-    #         else:
-    #             raise
-    #
-    #     if df is not None:
-    #         # Create a temp table to use as the merge source
-    #         temp_table_name = f"{table_name}_temp_update"
-    #         self.create_table(target_path, temp_table_name, df=df)
-    #
-    #         merge_sql = f"""
-    #         MERGE INTO {full_table_path} AS t
-    #         USING {target_path}.{temp_table_name} AS s
-    #         ON ({on})
-    #         WHEN MATCHED THEN UPDATE SET *
-    #         WHEN NOT MATCHED THEN INSERT *
-    #         """
-    #         self.query(merge_sql)
-    #
-    #         # Optionally drop temp table
-    #         # TODO: Add argument for keep_temp_table -> Default: False
-    #         drop_sql = f"DROP TABLE {target_path}.{temp_table_name}"
-    #         self.query(drop_sql)
-    #
-    #     elif sql is not None:
-    #         # Use SQL query directly as source
-    #         merge_sql = f"""
-    #         MERGE INTO {full_table_path} AS t
-    #         USING ({sql}) AS s
-    #         ON ({on})
-    #         WHEN MATCHED THEN UPDATE SET *
-    #         WHEN NOT MATCHED THEN INSERT *
-    #         """
-    #         self.query(merge_sql)
-    #
+    def update_table_from_dataframe(self, df: pd.DataFrame | pl.DataFrame, on: str, path: str, batch_size: int = 1000, keep_temp_table: Bool = False) -> None:
+        """
+        Updates or inserts rows into an existing Iceberg table in Dremio using MERGE INTO.
+    
+        Args:
+            dremio: Dremio connection instance.
+            path: Path in the Dremio catalog.
+            df: DataFrame to use as source data.
+        Raises:
+            ValueError: If neither or both `df` and `sql` are provided.
+            RuntimeError: If the target table does not exist.
+        """
+
+        if isinstance(df, pd.DataFrame):
+            df = pl.from_pandas(df)
+        if not isinstance(df, (pd.DataFrame, pl.DataFrame)):
+            raise TypeError("df must be a Pandas or Polars DataFrame.")
+    
+        if df is not None:
+            # Create a temp table to use as the merge source
+            table_name = path.split('.')[-1]
+            folder = path_to_dotted(path.split('.')[0:-1])
+            print(folder)
+            temp_table_path = f"{folder}.{table_name}_temp_update"
+            self.create_table_from_dataframe(df, temp_table_path, batch_size=batch_size)
+    
+            merge_sql = f"""
+            MERGE INTO {path} AS t
+            USING {temp_table_path} AS s
+            ON ({on})
+            WHEN MATCHED THEN UPDATE SET *
+            WHEN NOT MATCHED THEN INSERT *
+            """  
+            try:
+                self.query(merge_sql)
+                pass
+            except DremioError as e:
+                raise e
+            
+            if not keep_temp_table:
+                try:
+                    drop_sql = f"DROP TABLE {temp_table_path}"
+                    self.query(drop_sql)
+                    pass
+                except DremioError as e:
+                    raise e
+
     # def get_table_files_metadata(dremio: Dremio, path, table_name):
     #     return dremio.query(f"SELECT * FROM TABLE(table_files('{path}.{table_name}'))").to_pandas()
     #
