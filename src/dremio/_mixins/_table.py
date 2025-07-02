@@ -4,8 +4,6 @@ import polars as pl
 from datetime import datetime, date
 from typing import Optional
 
-from traitlets import Bool
-
 from ..utils.converter import path_to_dotted, path_to_list
 from ..exceptions import DremioError
 
@@ -15,7 +13,6 @@ from ._dataset import _MixinDataset
 from ._sql import _MixinSQL
 from ._flight import _MixinFlight
 from ._query import _MixinQuery
-
 
 def map_dtype_to_sql(dtype: pl.DataType) -> str:
     """Maps Polars dtype to Dremio SQL data type."""
@@ -55,6 +52,24 @@ def escape_sql_value(val) -> str:
     else:
         return str(val)
 
+def sql_merge_on_clause(on: dict[str, str] | str, source_var:str="s", target_var:str="t") -> str:
+    """
+    Converts a dictionary or string into a SQL ON clause for MERGE statements.
+    
+    Args:
+        on: A dictionary mapping source column names to target column names, or a string representing the ON clause.
+        source_var: The variable name for the source table (default is 's').
+        target_var: The variable name for the target table (default is 't').
+    
+    Returns:
+        A string representing the SQL ON clause.
+    """
+    if isinstance(on, dict):
+        return " AND ".join([f"{target_var}.{k} = {source_var}.{v}" for k, v in on.items()])
+    elif isinstance(on, str):
+        return on
+    else:
+        raise TypeError("on must be a dict or a string.")
 
 def dotted_full_path(path: list[str] | str, name: Optional[str] = None) -> str:
     path = path_to_list(path)
@@ -81,7 +96,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
 
         if isinstance(df, pd.DataFrame):
             df = pl.from_pandas(df)
-        if not isinstance(df, (pd.DataFrame, pl.DataFrame)):
+        if not isinstance(df, pl.DataFrame):
             raise TypeError("df must be a Pandas or Polars DataFrame.")
         full_table_path = dotted_full_path(path, name)
 
@@ -197,7 +212,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
                 "from must be a Pandas DataFrame, Polars DataFrame or a SQL query string."
             )
 
-    def update_table_from_sql(self, sql: str, on: str, path: str) -> None:
+    def update_table_from_sql(self, sql: str, path: list[str]|str, *, on: dict[str,str]|str = {'id':'id'}) -> None:
         """
         Updates or inserts rows into an existing Iceberg table in Dremio using MERGE INTO.
     
@@ -205,37 +220,39 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
             dremio: Dremio connection instance.
             path: Path in the Dremio catalog.
             sql: SQL query string as source.
-            on: SQL ON clause string to define matching criteria (e.g., "t.id = s.id"). Use "s." and "t." as prefix to indicate source and target column. 
+            on: SQL ON clause string to define matching criteria (e.g., "t.id = s.id"). As string use "s." and "t." as prefix to indicate source and target column. As dict use {"target_column": "source_column"}. 
         Raises:
-            ValueError: If neither or both `df` and `sql` are provided.
             RuntimeError: If the target table does not exist.
+            DremioError: If Dremio returns an error.
         """
     
         if not isinstance(sql, str):
             raise TypeError("sql must be a string.")
         
+        path = path_to_dotted(path)
         try:
             dataset = self.get_catalog_by_path(path)
             if not dataset:
                 raise RuntimeError(f"Table '{path}' does not exist. Use create_table() instead.")
         except DremioError as e:
             if "No such file or directory" in str(e):
-                raise RuntimeError(f"Table '{path}' does not exist.")
+                e.errorMessage = f"Table '{path}' does not exist."
+                raise e
             else:
-                raise
+                raise e
     
         # Use SQL query directly as source
         merge_sql = f"""
         MERGE INTO {path} AS t
         USING ({sql}) AS s
-        ON ({on})
+        ON ({sql_merge_on_clause(on, source_var='s', target_var='t')})
         WHEN MATCHED THEN UPDATE SET *
         WHEN NOT MATCHED THEN INSERT *
         """
         print(merge_sql)
         self.query(merge_sql)
 
-    def update_table_from_dataframe(self, df: pd.DataFrame | pl.DataFrame, on: str, path: str, batch_size: int = 1000, keep_temp_table: Bool = False) -> None:
+    def update_table_from_dataframe(self, df: pd.DataFrame | pl.DataFrame, path: list[str]|str, *, on: dict[str,str]|str = {'id':'id'}, batch_size: int = 1000, keep_temp_table: bool = False) -> None:
         """
         Updates or inserts rows into an existing Iceberg table in Dremio using MERGE INTO.
     
@@ -243,6 +260,9 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
             dremio: Dremio connection instance.
             path: Path in the Dremio catalog.
             df: DataFrame to use as source data.
+            on: SQL ON clause string to define matching criteria (e.g., "t.id = s.id"). As string use "s." and "t." as prefix to indicate source and target column. As dict use {"target_column": "source_column"}. 
+            batch_size: Number of rows to insert in each batch.
+            keep_temp_table: If True, the temporary table will not be dropped after the merge operation.
         Raises:
             ValueError: If neither or both `df` and `sql` are provided.
             RuntimeError: If the target table does not exist.
@@ -250,37 +270,36 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
 
         if isinstance(df, pd.DataFrame):
             df = pl.from_pandas(df)
-        if not isinstance(df, (pd.DataFrame, pl.DataFrame)):
+        if not isinstance(df, pl.DataFrame):
             raise TypeError("df must be a Pandas or Polars DataFrame.")
     
-        if df is not None:
-            # Create a temp table to use as the merge source
-            table_name = path.split('.')[-1]
-            folder = path_to_dotted(path.split('.')[0:-1])
-            print(folder)
-            temp_table_path = f"{folder}.{table_name}_temp_update"
-            self.create_table_from_dataframe(df, temp_table_path, batch_size=batch_size)
-    
-            merge_sql = f"""
-            MERGE INTO {path} AS t
-            USING {temp_table_path} AS s
-            ON ({on})
-            WHEN MATCHED THEN UPDATE SET *
-            WHEN NOT MATCHED THEN INSERT *
-            """  
+        # Create a temp table to use as the merge source
+        path = path_to_list(path)
+        table_name = path[-1]
+        folder = path_to_dotted(path[0:-1])
+        # print(folder)
+        temp_table_path = path_to_dotted(f"{folder}.{table_name}_temp_update")
+        self.create_table_from_dataframe(df=df, path=temp_table_path, batch_size=batch_size)
+
+        merge_sql = f"""
+        MERGE INTO {path} AS t
+        USING {temp_table_path} AS s
+        ON ({sql_merge_on_clause(on, source_var='s', target_var='t')})
+        WHEN MATCHED THEN UPDATE SET *
+        WHEN NOT MATCHED THEN INSERT *
+        """  
+        try:
+            self.query(merge_sql)
+            pass
+        except DremioError as e:
+            raise e
+        
+        if not keep_temp_table:
             try:
-                self.query(merge_sql)
-                pass
+                drop_sql = f"DROP TABLE {temp_table_path}"
+                self.query(drop_sql)
             except DremioError as e:
                 raise e
-            
-            if not keep_temp_table:
-                try:
-                    drop_sql = f"DROP TABLE {temp_table_path}"
-                    self.query(drop_sql)
-                    pass
-                except DremioError as e:
-                    raise e
 
     # def get_table_files_metadata(dremio: Dremio, path, table_name):
     #     return dremio.query(f"SELECT * FROM TABLE(table_files('{path}.{table_name}'))").to_pandas()
