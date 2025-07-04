@@ -1,4 +1,5 @@
 __all__ = ["_MixinTable"]  # this is like `export ...` in typescript
+import logging
 import pandas as pd
 import polars as pl
 from datetime import datetime, date
@@ -75,6 +76,18 @@ def dotted_full_path(path: list[str] | str, name: Optional[str] = None) -> str:
     path = path_to_list(path)
     return f"{'.'.join(path)}.{name}" if name else ".".join(path)
 
+def warning_large_table_creation(df: pl.DataFrame) -> None:
+    """
+    Logs a warning if the DataFrame has more than 10,000 rows.
+    
+    Args:
+        df: Polars DataFrame to check.
+    """
+    if len(df) > 10_000:
+        logging.warning(
+            "Creating a table with more than 10,000 rows may take a while. "
+            "Consider using smaller batch sizes for better performance."
+        )
 
 class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass):
     def create_table_from_dataframe(
@@ -99,6 +112,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
         if not isinstance(df, pl.DataFrame):
             raise TypeError("df must be a Pandas or Polars DataFrame.")
         full_table_path = dotted_full_path(path, name)
+        warning_large_table_creation(df)
 
         # 1. Create table using DataFrame schema
         column_definitions = []
@@ -272,6 +286,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
             df = pl.from_pandas(df)
         if not isinstance(df, pl.DataFrame):
             raise TypeError("df must be a Pandas or Polars DataFrame.")
+        warning_large_table_creation(df)
     
         # Create a temp table to use as the merge source
         path = path_to_list(path)
