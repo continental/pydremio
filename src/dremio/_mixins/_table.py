@@ -79,8 +79,8 @@ def dotted_full_path(path: list[str] | str, name: Optional[str] = None) -> str:
 class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass):
     def create_table_from_dataframe(
         self,
-        df: pd.DataFrame | pl.DataFrame,
         path: list[str] | str,
+        df: pd.DataFrame | pl.DataFrame,
         *,
         name: Optional[str] = None,
         batch_size: int = 1000,
@@ -147,7 +147,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
             self.query(insert_sql)
 
     def create_table_from_sql(
-        self, sql: str, path: list[str] | str, name: Optional[str] = None
+        self, path: list[str] | str, sql: str, name: Optional[str] = None
     ) -> None:
         """
         Creates an Iceberg table in Dremio from an SQL query.
@@ -179,8 +179,8 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
 
     def create_table(
         self,
-        based_on: pd.DataFrame | pl.DataFrame | str,
         path: str,
+        based_on: pd.DataFrame | pl.DataFrame | str,
         name: Optional[str] = None,
         *,
         batch_size: int = 1000,
@@ -212,7 +212,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
                 "from must be a Pandas DataFrame, Polars DataFrame or a SQL query string."
             )
 
-    def update_table_from_sql(self, sql: str, path: list[str]|str, *, on: dict[str,str]|str = {'id':'id'}) -> None:
+    def update_table_from_sql(self, path: list[str]|str, sql: str, *, on: dict[str,str]|str = {'id':'id'}) -> None:
         """
         Updates or inserts rows into an existing Iceberg table in Dremio using MERGE INTO.
     
@@ -252,7 +252,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
         print(merge_sql)
         self.query(merge_sql)
 
-    def update_table_from_dataframe(self, df: pd.DataFrame | pl.DataFrame, path: list[str]|str, *, on: dict[str,str]|str = {'id':'id'}, batch_size: int = 1000, keep_temp_table: bool = False) -> None:
+    def update_table_from_dataframe(self, path: list[str]|str, df: pd.DataFrame | pl.DataFrame,  *, on: dict[str,str]|str = {'id':'id'}, batch_size: int = 1000, keep_temp_table: bool = False) -> None:
         """
         Updates or inserts rows into an existing Iceberg table in Dremio using MERGE INTO.
     
