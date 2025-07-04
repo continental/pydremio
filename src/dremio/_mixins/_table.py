@@ -95,7 +95,6 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
         path: list[str] | str,
         df: pd.DataFrame | pl.DataFrame,
         *,
-        name: Optional[str] = None,
         batch_size: int = 1000,
     ) -> None:
         """
@@ -103,7 +102,6 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
 
         Args:
             path: Path in the Dremio catalog where the table should be created.
-            name: Name of the new table.
             df: Pandas or Polars DataFrame to use for schema and data insertion.
         """
 
@@ -111,7 +109,6 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
             df = pl.from_pandas(df)
         if not isinstance(df, pl.DataFrame):
             raise TypeError("df must be a Pandas or Polars DataFrame.")
-        full_table_path = dotted_full_path(path, name)
         warning_large_table_creation(df)
 
         # 1. Create table using DataFrame schema
@@ -120,9 +117,11 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
             sql_type = map_dtype_to_sql(df[col].dtype)
             column_definitions.append(f'"{col}" {sql_type}')
         columns_sql = ",\n  ".join(column_definitions)
+        
+        path = path_to_dotted(path)
 
         create_sql = f"""
-        CREATE TABLE {full_table_path}
+        CREATE TABLE {path}
         (
           {columns_sql}
         )
@@ -134,7 +133,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
         except DremioError as e:
             if e.status_code == 409:
                 e.errorMessage = (
-                    f"Table '{full_table_path}' already exists. Use update_dataset() to modify it."
+                    f"Table '{path}' already exists. Use update_dataset() to modify it."
                     + e.errorMessage
                 )
                 raise e
@@ -147,7 +146,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
             value_rows.append(f"({values})")
             if len(value_rows) >= batch_size:
                 insert_sql = f"""
-                INSERT INTO {full_table_path} VALUES
+                INSERT INTO {path} VALUES
                 {",\n".join(value_rows)}
                 """
                 self.query(insert_sql)
@@ -155,30 +154,28 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
 
         if value_rows:
             insert_sql = f"""
-            INSERT INTO {full_table_path} VALUES
+            INSERT INTO {path} VALUES
             {",\n".join(value_rows)}
             """
             self.query(insert_sql)
 
-    def create_table_from_sql(
-        self, path: list[str] | str, sql: str, name: Optional[str] = None
-    ) -> None:
+    def create_table_from_sql(self, path: list[str] | str, sql: str) -> None:
         """
         Creates an Iceberg table in Dremio from an SQL query.
 
         Args:
             path: Path in the Dremio catalog where the table should be created.
-            name: Name of the new table.
             sql: SQL query to use for creating the table via CTAS (CREATE TABLE AS SELECT).
         """
 
         if not isinstance(sql, str):
             raise TypeError("sql must be a string.")
-        full_table_path = dotted_full_path(path, name)
+
+        path = path_to_dotted(path)
 
         # Create table using SQL query
         create_sql = f"""
-        CREATE TABLE {full_table_path} AS
+        CREATE TABLE {path} AS
         {sql}
         """
         try:
@@ -186,7 +183,7 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
         except DremioError as e:
             if e.status_code == 409:
                 e.errorMessage = (
-                    f"Table '{full_table_path}' already exists. Use update_table() to modify it."
+                    f"Table '{path}' already exists. Use update_table() to modify it."
                     + e.errorMessage
                 )
                 raise e
@@ -195,7 +192,6 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
         self,
         path: str,
         based_on: pd.DataFrame | pl.DataFrame | str,
-        name: Optional[str] = None,
         *,
         batch_size: int = 1000,
     ) -> None:
@@ -205,7 +201,6 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
         Args:
             based_on: Optional DataFrame or SQL-Statement to use for schema and data insertion.
             path: Path in the Dremio catalog where the table should be created.
-            name: Name of the new table.
         Raises:
             ValueError: If neither or both `df` and `sql` are provided.
             RuntimeError: If the table already exists.
@@ -217,10 +212,10 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
             )
         if isinstance(based_on, (pd.DataFrame, pl.DataFrame)):
             self.create_table_from_dataframe(
-                df=based_on, path=path, name=name, batch_size=batch_size
+                df=based_on, path=path, batch_size=batch_size
             )
         elif isinstance(based_on, str):
-            self.create_table_from_sql(sql=based_on, path=path, name=name)
+            self.create_table_from_sql(sql=based_on, path=path)
         else:
             raise TypeError(
                 "from must be a Pandas DataFrame, Polars DataFrame or a SQL query string."
@@ -292,12 +287,11 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
         path = path_to_list(path)
         table_name = path[-1]
         folder = path_to_dotted(path[0:-1])
-        # print(folder)
         temp_table_path = path_to_dotted(f"{folder}.{table_name}_temp_update")
         self.create_table_from_dataframe(df=df, path=temp_table_path, batch_size=batch_size)
 
         merge_sql = f"""
-        MERGE INTO {path} AS t
+        MERGE INTO {path_to_dotted(path)} AS t
         USING {temp_table_path} AS s
         ON ({sql_merge_on_clause(on, source_var='s', target_var='t')})
         WHEN MATCHED THEN UPDATE SET *
@@ -316,17 +310,17 @@ class _MixinTable(_MixinQuery, _MixinFlight, _MixinDataset, _MixinSQL, BaseClass
             except DremioError as e:
                 raise e
 
-    # def get_table_files_metadata(dremio: Dremio, path, table_name):
+    # def get_table_files_metadata(dremio: Dremio, path):
     #     return dremio.query(f"SELECT * FROM TABLE(table_files('{path}.{table_name}'))").to_pandas()
-    #
+    
     # def get_table_history_metadata(dremio: Dremio, path, table_name):
     #     return dremio.query(f"SELECT * FROM TABLE(table_history('{path}.{table_name}'))").to_pandas()
-    #
+    
     # def get_table_manifests_metadata(dremio: Dremio, path, table_name):
     #     return dremio.query(f"SELECT * FROM TABLE(table_manifests('{path}.{table_name}'))").to_pandas()
-    #
+    
     # def get_table_partitions_metadata(dremio: Dremio, path, table_name):
     #     return dremio.query(f"SELECT * FROM TABLE(table_partitions('{path}.{table_name}'))").to_pandas()
-    #
+    
     # def get_table_snapshot_metadata(dremio: Dremio, path, table_name):
     #     return dremio.query(f"SELECT * FROM TABLE(table_snapshot('{path}.{table_name}'))").to_pandas()
