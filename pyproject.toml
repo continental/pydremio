@@ -13,7 +13,7 @@ where = ["src"]
 
 [project]
 name = "pydremio"
-version = "0.3.2"
+version = "0.4.0"
 authors = [
   { name="Holger Zernetsch", email="6146286+holgerzer@users.noreply.github.com" },
   { name="Jan Pietsch", email="55839828+Piitschy@users.noreply.github.com" },

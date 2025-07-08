@@ -7,12 +7,12 @@ To install this connector use:
 > This is a prerelease!
 
 ```bash
-pip install https://github.com/continental/pydremio/releases/download/v0.3.2/dremio-0.3.2-py3-none-any.whl
+pip install https://github.com/continental/pydremio/releases/download/v0.4.0/dremio-0.4.0-py3-none-any.whl
 ```
 
 Or you can use it inside a virtual environment, `pipenv` for example:
 ```bash
-pipenv install https://github.com/continental/pydremio/releases/download/v0.3.2/dremio-0.3.2-py3-none-any.whl
+pipenv install https://github.com/continental/pydremio/releases/download/v0.4.0/dremio-0.4.0-py3-none-any.whl
 ```
 
 Import the connector with:
