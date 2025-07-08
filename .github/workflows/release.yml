@@ -4,11 +4,11 @@ name: Build and Draft Release
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+    - 'v*.*.*'
 
 jobs:
   build-and-release:
-    if: github.event.base_ref == 'refs/heads/main'
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
     steps:
