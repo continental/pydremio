@@ -2,6 +2,7 @@ from dataclasses import asdict
 from uuid import UUID
 from typing import Union
 import re
+import ast
 
 
 def to_dict(d) -> dict:
@@ -20,18 +21,22 @@ def to_dict(d) -> dict:
 
 def path_to_list(path: Union[str, list[str]]) -> list[str]:
     if isinstance(path, list):
-        # Preserve blanks, just remove surrounding double quotes if any
         return [p.replace('"', "") for p in path if p]
 
     if not isinstance(path, str):
         raise ValueError("path must be a string or list of strings")
 
-    # Regex to match:
-    # - Single-quoted strings with escapes
-    # - Or plain dot-separated unquoted segments
+    # Handle bracketed-array style strings: "[a, b, c]"
+    if path.startswith("[") and path.endswith("]"):
+        try:
+            raw = ast.literal_eval(path)
+            return [str(p).strip(' "\'') for p in raw]
+        except Exception:
+            pass  # Fallback to regex
+
     token_pattern = re.compile(r"""
-        '([^'\\]*(?:\\.[^'\\]*)*)' |   # Group 1: quoted
-        ([^.]+)                        # Group 2: unquoted
+        '([^'\\]*(?:\\.[^'\\]*)*)' |   # quoted with single quotes
+        ([^. \[\],]+)                  # unquoted segments
     """, re.VERBOSE)
 
     tokens = []
@@ -40,8 +45,7 @@ def path_to_list(path: Union[str, list[str]]) -> list[str]:
         if quoted is not None:
             tokens.append(quoted.replace("\\'", "'"))
         elif unquoted is not None:
-            tokens.append(unquoted.replace('"', ""))  # Preserve blanks, no strip
-
+            tokens.append(unquoted)
     return [t for t in tokens if t]
 
 
