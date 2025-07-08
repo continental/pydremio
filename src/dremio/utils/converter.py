@@ -25,49 +25,77 @@ def path_to_list(path: Union[str, list[str]]) -> list[str]:
     if not isinstance(path, str):
         raise ValueError("path must be a string or list of strings")
 
-    # Regex to detect bracketed list strings like: [a, b, "c d", 'e f']
-    bracketed_pattern = re.compile(r'^\s*\[(.*)\]\s*$')
+    # Match segments that are:
+    # - Double-quoted: "c.d"
+    # - Single-quoted: 'c.d'
+    # - Or plain (no dots inside, no quotes)
+    token_pattern = re.compile(r'''
+        "((?:[^"\\]|\\.)*)"   |  # Group 1: double-quoted segment
+        '((?:[^'\\]|\\.)*)'   |  # Group 2: single-quoted segment
+        ([^.]+)                  # Group 3: unquoted segment (no dot)
+    ''', re.VERBOSE)
 
-    m = bracketed_pattern.match(path)
-    if m:
-        inner = m.group(1)
-
-        # Regex to capture segments, quoted or unquoted, separated by commas
-        segment_pattern = re.compile(r'''
-            \s*                         # optional leading whitespace
-            (                           # capture group for segment
-              "(?:[^"\\]|\\.)*"         |  # double quoted string (with escapes)
-              '(?:[^'\\]|\\.)*'         |  # single quoted string (with escapes)
-              [^,'" ](?:[^,]*)?            # unquoted segment (no commas or quotes)
-            )
-            \s*                         # optional trailing whitespace
-            (?:,|$)                     # comma or end of string
-        ''', re.VERBOSE)
-
-        segments = []
-        for match in segment_pattern.finditer(inner):
-            segment = match.group(1)
-            # Strip quotes if any
-            if (segment.startswith("'") and segment.endswith("'")) or \
-               (segment.startswith('"') and segment.endswith('"')):
-                segment = segment[1:-1]
-            segments.append(segment)
-        return segments
-
-    # Fallback: parse dotted notation or quoted segments
-    token_pattern = re.compile(r"""
-        '([^'\\]*(?:\\.[^'\\]*)*)' |   # single quoted segment with escapes
-        ([^. \[\],]+)                  # unquoted segment without dots, spaces, brackets, commas
-    """, re.VERBOSE)
-
-    tokens = []
+    segments = []
     for match in token_pattern.finditer(path):
-        quoted, unquoted = match.groups()
-        if quoted is not None:
-            tokens.append(quoted.replace("\\'", "'"))
-        elif unquoted is not None:
-            tokens.append(unquoted)
-    return [t for t in tokens if t]
+        dq, sq, uq = match.groups()
+        if dq is not None:
+            segments.append(dq)
+        elif sq is not None:
+            segments.append(sq)
+        elif uq is not None:
+            segments.append(uq)
+    return segments
+
+# def path_to_list(path: Union[str, list[str]]) -> list[str]:
+#     if isinstance(path, list):
+#         return [p.replace('"', "") for p in path if p]
+
+#     if not isinstance(path, str):
+#         raise ValueError("path must be a string or list of strings")
+
+#     # Regex to detect bracketed list strings like: [a, b, "c d", 'e f']
+#     bracketed_pattern = re.compile(r'^\s*\[(.*)\]\s*$')
+
+#     m = bracketed_pattern.match(path)
+#     if m:
+#         inner = m.group(1)
+
+#         # Regex to capture segments, quoted or unquoted, separated by commas
+#         segment_pattern = re.compile(r'''
+#             \s*                         # optional leading whitespace
+#             (                           # capture group for segment
+#               "(?:[^"\\]|\\.)*"         |  # double quoted string (with escapes)
+#               '(?:[^'\\]|\\.)*'         |  # single quoted string (with escapes)
+#               [^,'" ](?:[^,]*)?            # unquoted segment (no commas or quotes)
+#             )
+#             \s*                         # optional trailing whitespace
+#             (?:,|$)                     # comma or end of string
+#         ''', re.VERBOSE)
+
+#         segments = []
+#         for match in segment_pattern.finditer(inner):
+#             segment = match.group(1)
+#             # Strip quotes if any
+#             if (segment.startswith("'") and segment.endswith("'")) or \
+#                (segment.startswith('"') and segment.endswith('"')):
+#                 segment = segment[1:-1]
+#             segments.append(segment)
+#         return segments
+
+#     # Fallback: parse dotted notation or quoted segments
+#     token_pattern = re.compile(r"""
+#         '([^'\\]*(?:\\.[^'\\]*)*)' |   # single quoted segment with escapes
+#         ([^. \[\],]+)                  # unquoted segment without dots, spaces, brackets, commas
+#     """, re.VERBOSE)
+
+#     tokens = []
+#     for match in token_pattern.finditer(path):
+#         quoted, unquoted = match.groups()
+#         if quoted is not None:
+#             tokens.append(quoted.replace("\\'", "'"))
+#         elif unquoted is not None:
+#             tokens.append(unquoted)
+#     return [t for t in tokens if t]
 
 
 def path_to_dotted(path: Union[list[str], str]) -> str:
