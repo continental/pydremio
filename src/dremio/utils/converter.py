@@ -2,7 +2,6 @@ from dataclasses import asdict
 from uuid import UUID
 from typing import Union
 import re
-import ast
 
 
 def to_dict(d) -> dict:
@@ -26,17 +25,39 @@ def path_to_list(path: Union[str, list[str]]) -> list[str]:
     if not isinstance(path, str):
         raise ValueError("path must be a string or list of strings")
 
-    # Handle bracketed-array style strings: "[a, b, c]"
-    if path.startswith("[") and path.endswith("]"):
-        try:
-            raw = ast.literal_eval(path)
-            return [str(p).strip(' "\'') for p in raw]
-        except Exception:
-            pass  # Fallback to regex
+    # Regex to detect bracketed list strings like: [a, b, "c d", 'e f']
+    bracketed_pattern = re.compile(r'^\s*\[(.*)\]\s*$')
 
+    m = bracketed_pattern.match(path)
+    if m:
+        inner = m.group(1)
+
+        # Regex to capture segments, quoted or unquoted, separated by commas
+        segment_pattern = re.compile(r'''
+            \s*                         # optional leading whitespace
+            (                           # capture group for segment
+              "(?:[^"\\]|\\.)*"         |  # double quoted string (with escapes)
+              '(?:[^'\\]|\\.)*'         |  # single quoted string (with escapes)
+              [^,'" ](?:[^,]*)?            # unquoted segment (no commas or quotes)
+            )
+            \s*                         # optional trailing whitespace
+            (?:,|$)                     # comma or end of string
+        ''', re.VERBOSE)
+
+        segments = []
+        for match in segment_pattern.finditer(inner):
+            segment = match.group(1)
+            # Strip quotes if any
+            if (segment.startswith("'") and segment.endswith("'")) or \
+               (segment.startswith('"') and segment.endswith('"')):
+                segment = segment[1:-1]
+            segments.append(segment)
+        return segments
+
+    # Fallback: parse dotted notation or quoted segments
     token_pattern = re.compile(r"""
-        '([^'\\]*(?:\\.[^'\\]*)*)' |   # quoted with single quotes
-        ([^. \[\],]+)                  # unquoted segments
+        '([^'\\]*(?:\\.[^'\\]*)*)' |   # single quoted segment with escapes
+        ([^. \[\],]+)                  # unquoted segment without dots, spaces, brackets, commas
     """, re.VERBOSE)
 
     tokens = []
