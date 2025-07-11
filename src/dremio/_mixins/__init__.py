@@ -10,6 +10,7 @@ __all__ = [
     "_MixinRole",
     "_MixinQuery",
     "_MixinTable",
+    "_MixinDbt",
 ]
 
 from .baseclass import Dremio as BaseClass
@@ -23,3 +24,4 @@ from ._user import _MixinUser
 from ._role import _MixinRole
 from ._query import _MixinQuery
 from ._table import _MixinTable
+from ._dbt import _MixinDbt

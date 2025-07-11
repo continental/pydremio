@@ -11,3 +11,4 @@ draft*
 uv.lock
 sandbox_*.py
 data.json
+export

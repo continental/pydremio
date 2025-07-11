@@ -1,5 +1,7 @@
 __all__ = ["_MixinDbt"]  # this is like `export ...` in typescript
 import logging
+
+from dremio.utils.decorators import experimental
 # import pandas as pd
 # import polars as pl
 # from datetime import datetime, date
@@ -31,9 +33,9 @@ def get_source_name_from_path(path: str) -> str:
 
 def filter_dict(d, whitelist):
     if isinstance(d, dict):
-        return {k: filter_dict(v) for k, v in d.items() if k in whitelist}
+        return {k: filter_dict(v, whitelist) for k, v in d.items() if k in whitelist}
     elif isinstance(d, list):
-        return [filter_dict(item) for item in d]
+        return [filter_dict(item, whitelist) for item in d]
     else:
         return d
 
@@ -90,9 +92,12 @@ def write_dbt_models(project_name, datasets, path_to_ref_map, output_dir, projec
         relative_folder = os.path.join(output_dir, *ds["path"][:-1])
         os.makedirs(relative_folder, exist_ok=True)
         filename = os.path.join(relative_folder, f"{ds['name']}.sql")
-        sanitized_sql = replace_with_ref_and_collect_sources(ds["sql"], path_to_ref_map, external_sources)
+        raw_sql = ds["sql"].replace("\r\n", "\n")
+        # raw_sql = "TEST"
+        sanitized_sql = replace_with_ref_and_collect_sources(raw_sql, path_to_ref_map, external_sources)
 
         with open(filename, "w") as f:
+            f.write(f"{{{{ config(alias='{path_to_dotted(ds["path"])}') }}}}\n\n")
             f.write(sanitized_sql)
 
     generate_dbt_project_yml(project_name, project_root)
@@ -176,7 +181,30 @@ def dump_to_json(dremio, path, temp_file):
         json.dump(filtered_data, f, indent=4)
 
 class _MixinDbt(BaseClass):
+    @experimental
     def to_dbt(self, path: str, project_name: str, project_root: str, output_dir: str) -> None:
+        """
+        Export Dremio datasets as dbt-compatible models and schema files.
+
+        This function traverses a Dremio folder structure, extracts all datasets and 
+        their SQL logic, and generates corresponding dbt model `.sql` files along with 
+        `schema.yml` files. It also infers `ref()` or `source()` references between datasets 
+        to build a valid dbt dependency graph.
+
+        Parameters:
+            path (str): The full path to the Dremio folder to export (e.g. '/Spaces/MyProject').
+            project_name (str): The dbt project name. Used in `dbt_project.yml` and model configs.
+            project_root (str): The root directory where the dbt project files (e.g. `dbt_project.yml`) will be written.
+            output_dir (str): The subfolder (typically `models`) where the model `.sql` and `schema.yml` files will be generated.
+
+        Notes:
+            - Models are materialized as `view` by default.
+            - External sources are detected and added to a separate `schema.yml` in a `sources/` folder.
+            - This function is marked as experimental and may change in future versions.
+
+        Example:
+            d.to_dbt("/Spaces/MyProject", "my_project", "dbt", "dbt/models")
+        """
         TEMP_FILE = "temp_export.json"
         dump_to_json(self, path, TEMP_FILE)  # Uncomment to regenerate dump
         catalog = load_catalog(TEMP_FILE)
