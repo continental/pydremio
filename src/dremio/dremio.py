@@ -19,6 +19,7 @@ from ._mixins import (
     _MixinReflection,
     _MixinUser,
     _MixinRole,
+    _MixinDbt,
 )
 
 
@@ -34,6 +35,7 @@ class Dremio(
     _MixinReflection,
     _MixinSQL,
     _MixinCatalog,
+    _MixinDbt,
     BaseClass,
 ):
     """This class is the main class of the Dremio connector. [learn more](https://github.com/continental/pydremio/blob/master/docs/DREMIO_METHODS.md)"""
