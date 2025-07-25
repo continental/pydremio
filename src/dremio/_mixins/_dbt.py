@@ -83,23 +83,38 @@ def flatten_datasets(node, path_to_ref_map, datasets):
 def write_dbt_models(project_name, datasets, path_to_ref_map, output_dir, project_root):
     external_sources = set()
 
+    used_filenames = set()  # track filenames globally
+
     for ds in datasets:
-        print(ds["path"])
         relative_folder = os.path.join(output_dir, *ds["path"][:-1])
         os.makedirs(relative_folder, exist_ok=True)
-        filename = os.path.join(relative_folder, f"{ds['name']}.sql")
+
+        base_name = ds["name"]
+        final_name = base_name
+        count = 1
+
+        # Find unique filename globally
+        while f"{final_name}.sql" in used_filenames:
+            final_name = f"{base_name}_{count}"
+            count += 1
+
+        used_filenames.add(f"{final_name}.sql")
+        ds["name"] = final_name  # update dataset name for alias and schema.yml
+
+        filename = os.path.join(relative_folder, f"{final_name}.sql")
+
         raw_sql = ds["sql"].replace("\r\n", "\n")
         sanitized_sql = replace_with_ref_and_collect_sources(raw_sql, path_to_ref_map, external_sources)
+
         database = ds["path"][0]
         schema = ".".join(ds["path"][1:-1]) if len(ds["path"]) > 2 else None
-        alias = ds["path"][-1]
+        alias = base_name
 
         config_line = f"{{{{ config(alias='{alias}'"
         if schema:
             config_line += f", schema='{schema}'"
         config_line += f", database='{database}'"
         config_line += ") }}\n\n"
-        print(config_line)
 
         with open(filename, "w") as f:
             f.write(config_line)
