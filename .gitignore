@@ -12,3 +12,5 @@ uv.lock
 sandbox_*.py
 data.json
 export
+venv
+temp_export.json

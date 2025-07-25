@@ -93,11 +93,20 @@ def write_dbt_models(project_name, datasets, path_to_ref_map, output_dir, projec
         os.makedirs(relative_folder, exist_ok=True)
         filename = os.path.join(relative_folder, f"{ds['name']}.sql")
         raw_sql = ds["sql"].replace("\r\n", "\n")
-        # raw_sql = "TEST"
         sanitized_sql = replace_with_ref_and_collect_sources(raw_sql, path_to_ref_map, external_sources)
+        database = ds["path"][0]
+        schema = ".".join(ds["path"][1:-1]) if len(ds["path"]) > 2 else None
+        alias = ds["path"][-1]
+
+        config_line = f"{{{{ config(alias='{alias}'"
+        if schema:
+            config_line += f", schema='{schema}'"
+        config_line += f", database='{database}'"
+        config_line += ") }}}\n\n"
+        print(config_line)
 
         with open(filename, "w") as f:
-            f.write(f"{{{{ config(alias='{path_to_dotted(ds["path"])}') }}}}\n\n")
+            f.write(config_line)
             f.write(sanitized_sql)
 
     generate_dbt_project_yml(project_name, project_root)
