@@ -69,7 +69,7 @@ def flatten_datasets(node, path_to_ref_map, datasets):
         model_name = clean_path[-1]
         path_to_ref_map[full_path] = model_name
         datasets.append({
-            "path": clean_path[1:],  # skip root
+            "path": clean_path,  # skip root
             "name": model_name,
             "sql": node["sql"],
             "full_path": full_path
@@ -84,6 +84,7 @@ def write_dbt_models(project_name, datasets, path_to_ref_map, output_dir, projec
     external_sources = set()
 
     for ds in datasets:
+        print(ds["path"])
         relative_folder = os.path.join(output_dir, *ds["path"][:-1])
         os.makedirs(relative_folder, exist_ok=True)
         filename = os.path.join(relative_folder, f"{ds['name']}.sql")
@@ -97,7 +98,7 @@ def write_dbt_models(project_name, datasets, path_to_ref_map, output_dir, projec
         if schema:
             config_line += f", schema='{schema}'"
         config_line += f", database='{database}'"
-        config_line += ") }}}\n\n"
+        config_line += ") }}\n\n"
         print(config_line)
 
         with open(filename, "w") as f:
