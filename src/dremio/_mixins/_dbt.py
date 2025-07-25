@@ -176,6 +176,7 @@ def generate_schema_ymls(datasets, external_sources, output_dir):
         with open(os.path.join(source_folder, "schema.yml"), "w") as f:
             yaml.dump({"version": 2, "sources": sources}, f, sort_keys=False)
 
+
 def dump_to_json(dremio, path, temp_file):
     folder = dremio.get_folder(path)
     data = folder.dump()
@@ -183,6 +184,7 @@ def dump_to_json(dremio, path, temp_file):
     filtered_data = filter_dict(data, whitelist)
     with open(temp_file, "w") as f:
         json.dump(filtered_data, f, indent=4)
+
 
 class _MixinDbt(BaseClass):
     @experimental
