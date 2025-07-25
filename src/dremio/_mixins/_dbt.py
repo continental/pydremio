@@ -101,10 +101,13 @@ def write_dbt_models(project_name, datasets, path_to_ref_map, output_dir, projec
         used_filenames.add(f"{final_name}.sql")
         ds["name"] = final_name  # update dataset name for alias and schema.yml
 
-        filename = os.path.join(relative_folder, f"{final_name}.sql")
+        safe_name = ds["name"].replace("/", "_").replace("\\", "_")  # sanitize filename
+        filename = os.path.join(relative_folder, f"{safe_name}.sql")
 
         raw_sql = ds["sql"].replace("\r\n", "\n")
+        print("===", relative_folder, base_name, "===")
         sanitized_sql = replace_with_ref_and_collect_sources(raw_sql, path_to_ref_map, external_sources)
+        print(sanitized_sql)
 
         database = ds["path"][0]
         schema = ".".join(ds["path"][1:-1]) if len(ds["path"]) > 2 else None
@@ -116,7 +119,7 @@ def write_dbt_models(project_name, datasets, path_to_ref_map, output_dir, projec
         config_line += f", database='{database}'"
         config_line += ") }}\n\n"
 
-        with open(filename, "w") as f:
+        with open(filename, "w", encoding="utf-8") as f:
             f.write(config_line)
             f.write(sanitized_sql)
 
@@ -228,7 +231,7 @@ class _MixinDbt(BaseClass):
             d.to_dbt("/Spaces/MyProject", "my_project", "dbt", "dbt/models")
         """
         TEMP_FILE = "temp_export.json"
-        dump_to_json(self, path, TEMP_FILE)  # Uncomment to regenerate dump
+        # dump_to_json(self, path, TEMP_FILE)  # Uncomment to regenerate dump
         catalog = load_catalog(TEMP_FILE)
         datasets = []
         path_to_ref_map = {}
