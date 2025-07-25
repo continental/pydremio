@@ -2,16 +2,11 @@ __all__ = ["_MixinDbt"]  # this is like `export ...` in typescript
 import logging
 
 from dremio.utils.decorators import experimental
-# import pandas as pd
-# import polars as pl
-# from datetime import datetime, date
-# from typing import Optional
 
 from ..utils.converter import path_to_dotted, path_to_list
 from ..exceptions import DremioError
 
 from . import BaseClass
-# from ._sql import _MixinSQL
 
 import os
 import json
