@@ -42,7 +42,8 @@ def load_catalog(filepath):
 
 def replace_with_ref_and_collect_sources(sql: str, full_path_to_ref: dict[str, str], external_sources: set[str]) -> str:
     def normalize_path(path: str) -> str:
-        segments = [seg.strip('"') for seg in path.split('.')]
+        # Split on dot but preserve quoted identifiers with dollar signs
+        segments = [seg.strip('"').strip("'") for seg in re.split(r'\.(?=(?:[^"]*"[^"]*")*[^"]*$)', path)]
         return '.'.join(segments)
 
     def replacer(match):
@@ -58,7 +59,7 @@ def replace_with_ref_and_collect_sources(sql: str, full_path_to_ref: dict[str, s
             source_name = get_source_name_from_path(normalized_path)
             return match.group(0).replace(raw_path, f"{{{{ source('{source_name}', '{table_name}') }}}}")
 
-    pattern = re.compile(r"\b(?:FROM|JOIN)\s+([a-zA-Z0-9_\".\']+)", re.IGNORECASE)
+    pattern = re.compile(r"\b(?:FROM|JOIN)\s+((?:\"?[a-zA-Z0-9_$]+\"?\.)*\"?[a-zA-Z0-9_$]+\"?)", re.IGNORECASE)
     return pattern.sub(replacer, sql)
 
 
@@ -231,7 +232,7 @@ class _MixinDbt(BaseClass):
             d.to_dbt("/Spaces/MyProject", "my_project", "dbt", "dbt/models")
         """
         TEMP_FILE = "temp_export.json"
-        # dump_to_json(self, path, TEMP_FILE)  # Uncomment to regenerate dump
+        dump_to_json(self, path, TEMP_FILE)  # Uncomment to regenerate dump
         catalog = load_catalog(TEMP_FILE)
         datasets = []
         path_to_ref_map = {}
