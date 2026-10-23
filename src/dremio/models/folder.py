@@ -61,7 +61,7 @@ class Folder(DremioAccessible, DremioObject):
         return self.path[-1]
 
     def pull(self) -> Self:
-        """Get the newest version of this folder form dremio.
+        """Get the newest version of this folder from dremio.
         Could be useful for multi-threading and updated children.
         This is the opposite of .commit()
 
