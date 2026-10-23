@@ -15,7 +15,7 @@ class FlightConfig:
 
     Properties:
       port (int): Port of the grpc endpoint of Dremio. Default: 32010.
-      tls (bool): Enable to use TLS. If `https` set as protocol for dremio, it is it is likely enabled.
+      tls (bool): Enable to use TLS. If `https` set as protocol for dremio, it is likely enabled.
       disable_certificate_verification: Disable to use certs from `path_to_certs`.
       allow_autoconfig (bool): Disable to prevent automatic tls setting.
       path_to_certs: Path to certs like cacert.pem. Default: certifi.where().

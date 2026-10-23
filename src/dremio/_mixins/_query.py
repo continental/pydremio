@@ -15,7 +15,7 @@ from ._flight import _MixinFlight
 
 
 class _MixinQuery(_MixinFlight, _MixinDataset, _MixinSQL, BaseClass):
-    "This is a abstraction of arrow flight and sql for easer usability."
+    "This is an abstraction of arrow flight and sql for easier usability."
 
     @overload
     def query(
