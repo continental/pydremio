@@ -88,11 +88,9 @@ class _MixinQuery(_MixinFlight, _MixinDataset, _MixinSQL, BaseClass):
         elif method == "arrow":
             try:
                 table: pa.Table = self._flight_query(sql_request=sql_request)
-                return JobResult.from_arrow_table(table)
             except Exception as e:
-                logging.warning(
-                    "Query over arrow flight failed. Check your config or try again over http."
-                )
-                raise e
+                logging.warning("Query over Arrow Flight failed: %s", e)
+                raise
+            return JobResult.from_arrow_table(table)
         else:
             raise ValueError('method must be "arrow" or "http"')
